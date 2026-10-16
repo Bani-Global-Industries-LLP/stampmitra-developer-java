@@ -9,6 +9,8 @@ permissions:
   contents: read
 
 env:
+  # Retry transient Maven Central failures ("Failed to read artifact descriptor ...") instead of failing the job.
+  MAVEN_OPTS: -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true
   # The conformance suite starts scripts/mock-server.mjs of the spec repo (checked out below, default branch).
   STAMPMITRA_SPEC_DIR: ${{ github.workspace }}/.openapi
   CONFORMANCE_REQUIRED: '1'
@@ -97,7 +99,15 @@ jobs:
           go-version: '1.24'
       - name: Dependency tree (convergence is enforced by maven-enforcer during verify)
         run: mvn -B dependency:tree
+      - name: Install osv-scanner (pinned; module integrity verified by the Go checksum database)
+        run: go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
       - name: OSV vulnerability scan of the Maven dependencies
         run: |
-          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
-          "$(go env GOPATH)/bin/osv-scanner" scan source --lockfile pom.xml --lockfile examples/pom.xml
+          osv="$(go env GOPATH)/bin/osv-scanner"
+          # Root: scan the dependency tree exactly as Maven resolved it (SBOM), not osv-scanner's own pom resolver.
+          mvn -B -q org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeBom -DoutputFormat=json -DoutputName=bom -DincludeTestScope=true
+          "$osv" scan source -L target/bom.json
+          # examples/pom.xml depends on the unpublished in.stampmitra:stampmitra-java, which no repository serves, so
+          # transitive resolution would abort the scan. Scan its declared dependencies only (the SDK's own tree is
+          # already covered by the SBOM above).
+          "$osv" scan source --no-resolve -L examples/pom.xml
