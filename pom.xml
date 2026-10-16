@@ -60,7 +60,7 @@
     <junit.version>5.13.4</junit.version>
     <assertj.version>3.27.7</assertj.version>
     <jacoco.version>0.8.13</jacoco.version>
-    <checkstyle.version>10.21.4</checkstyle.version>
+    <checkstyle.version>14.3.0</checkstyle.version>
   </properties>
 
   <dependencyManagement>
