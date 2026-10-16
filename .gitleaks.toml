@@ -1,0 +1,13 @@
+# The only secret-shaped strings in this repository are synthetic: the documented webhook test vectors
+# (whsec_test_...) and fake sk_test_ keys used by tests and the mock-server examples.
+title = "stampmitra-developer-java"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "synthetic test credentials"
+paths = [
+  '''src/test/''',
+  '''scripts/run-examples\.sh''',
+]

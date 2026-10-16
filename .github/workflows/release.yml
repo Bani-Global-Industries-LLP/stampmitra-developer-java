@@ -1,0 +1,56 @@
+name: Release
+
+# Inert until the repository variable MAVEN_PUBLISH is set to "true" (Settings > Secrets and variables > Actions > Variables).
+# One-time setup, secrets and the release steps are documented in RELEASING.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ vars.MAVEN_PUBLISH == 'true' }}
+    runs-on: ubuntu-latest
+    environment: maven-central   # configure required reviewers on this environment
+    permissions:
+      contents: write            # create the GitHub release after a successful deploy
+    env:
+      STAMPMITRA_SPEC_DIR: ${{ github.workspace }}/.openapi
+      CONFORMANCE_REQUIRED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Bani-Global-Industries-LLP/stampmitra-developer-openapi
+          path: .openapi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: maven
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Tag matches the pom version
+        run: |
+          v="$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)"
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} != pom version v$v"; exit 1; }
+          test "$v" = "$(sed -n 's/.*VERSION = "\(.*\)";/\1/p' src/main/java/in/stampmitra/sdk/StampMitra.java)" \
+            || { echo "StampMitra.VERSION differs from the pom version"; exit 1; }
+      - name: Build, test, sign and upload to the Central Portal (validated, then waits for a manual Publish)
+        run: mvn -B -Prelease deploy
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --generate-notes --title "${GITHUB_REF_NAME}" --verify-tag

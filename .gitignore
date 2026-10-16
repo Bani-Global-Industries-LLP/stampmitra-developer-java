@@ -1,0 +1,15 @@
+/target/
+/examples/target/
+dependency-reduced-pom.xml
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.DS_Store
+.env
+*.gpg
+*.asc

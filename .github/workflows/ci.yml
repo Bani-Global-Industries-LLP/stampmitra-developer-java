@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # The conformance suite starts scripts/mock-server.mjs of the spec repo (checked out below, default branch).
+  STAMPMITRA_SPEC_DIR: ${{ github.workspace }}/.openapi
+  CONFORMANCE_REQUIRED: '1'
+
+jobs:
+  test:
+    name: test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['11', '17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Bani-Global-Industries-LLP/stampmitra-developer-openapi
+          path: .openapi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      # Compiles with -Xlint:all -Werror, runs checkstyle, unit + conformance tests, builds the javadoc jar
+      # (doclint=all, warnings fail the build) and enforces the JaCoCo line-coverage minimum.
+      - run: mvn -B verify
+      - name: JaCoCo report
+        if: matrix.java == '21'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+
+  generated:
+    name: generated code and spec coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/generate.mjs --check
+      - run: node scripts/readme-snippets.mjs --check
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Every operation in spec/openapi.json has an SDK method
+        run: mvn -B -q test -Dtest=SpecCoverageTest -Djacoco.skip=true
+
+  examples:
+    name: examples (run against the mock server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Bani-Global-Industries-LLP/stampmitra-developer-openapi
+          path: .openapi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: scripts/run-examples.sh
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Dependency tree (convergence is enforced by maven-enforcer during verify)
+        run: mvn -B dependency:tree
+      - name: OSV vulnerability scan of the Maven dependencies
+        run: |
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
+          "$(go env GOPATH)/bin/osv-scanner" scan source --lockfile pom.xml --lockfile examples/pom.xml
