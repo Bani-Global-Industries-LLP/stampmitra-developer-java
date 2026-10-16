@@ -92,7 +92,7 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.24'
       - name: Dependency tree (convergence is enforced by maven-enforcer during verify)
