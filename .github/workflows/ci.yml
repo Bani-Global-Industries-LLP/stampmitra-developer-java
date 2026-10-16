@@ -24,8 +24,8 @@ jobs:
       matrix:
         java: ['11', '17', '21']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: Bani-Global-Industries-LLP/stampmitra-developer-openapi
           path: .openapi
@@ -51,7 +51,7 @@ jobs:
     name: generated code and spec coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -69,8 +69,8 @@ jobs:
     name: examples (run against the mock server)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: Bani-Global-Industries-LLP/stampmitra-developer-openapi
           path: .openapi
@@ -88,7 +88,7 @@ jobs:
     name: dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
