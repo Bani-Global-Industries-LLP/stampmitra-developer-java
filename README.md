@@ -68,7 +68,11 @@ and `::1`, e.g. a mock server) and must not contain credentials. Every method al
 |----------|---------|-----|
 | `client.verify()` | `pan`, `gstin`, `rc`, `voterId`, `drivingLicense`, `passport`, `cin`, `udyam`, `panToGstin`, `panToUdyam`, `bankAccount` | `POST /v1/verify/*` |
 | `client.services()` | `list`, `get(serviceCode)` | `GET /v1/services` |
-| `client.estamp()` | `getSchema`, `listStates`, `listInstruments`, `listArticles`, `calculateDuty`, `addParties` | `/v1/estamp/*` |
+| `client.estamp()` | `getSchema`, `listStates`, `getStatesAvailability`, `getState`, `getStateRequirements`, `listInstruments`, `listDistricts`, `listSros`, `listArticles`, `calculateDuty`, `addParties`, `getWallet` | `/v1/estamp/*` |
+| `client.estamp().orders()` | `validate`, `create`, `list`, `get`, `cancel`, `export`, `listStamps`, `uploadDocument` | `/v1/estamp/orders/*` |
+| `client.estamp().stamps()` | `get`, `cancel`, `replace`, `setPanCard`, `getCertificate` | `/v1/estamp/stamps/*` |
+| `client.wallets().stampDuty()`, `.serviceFee()` | `getBalance`, `topup`, `listTransactions`, `listInvoices`, `getInvoice` | `/v1/stamp-duty-wallet/*`, `/v1/service-fee-wallet/*` |
+| `client.account()` | `getBalance`, `getUsage` | `/v1/account/*` |
 | `client.orders()` | `create`, `get`, `getStatus`, `getPayment`, `listDocuments`, `getDocumentDownload` | `/v1/orders/*` |
 | `client.payments().intents()` | `create`, `get` | `/v1/payments/intents` |
 | `client.usage()` | `summary` | `GET /v1/usage/summary` |
@@ -139,19 +143,92 @@ Endpoints whose shape the API does not fix (e-Stamp reference data, duty, partie
 `GenericResponse` (`getRaw()`, `get(key)`, `getItems()`). `GET /v1/services` answers with a bare JSON array, exposed as an
 iterable `ServiceList`. `toString()` of a model masks personal data.
 
+## e-Stamp orders
+
+One order covers one state: 1 to 5000 stamp lines, each with up to 1000 identical stamps. Validate first (a dry run: nothing is
+created or billed), create with an `Idempotency-Key`, upload the payer's PAN card, then read the stamps and certificates.
+The SDK generates a UUIDv4 key when you pass none and re-uses it across automatic retries; **persist your own key before
+sending** (derive it from something stable such as an agreement id plus a version) if you need to resume after a crash.
+
+```java
+import in.stampmitra.sdk.RequestOptions;
+import in.stampmitra.sdk.models.EstampCertificate;
+import in.stampmitra.sdk.models.EstampOrder;
+import in.stampmitra.sdk.models.EstampStamp;
+import in.stampmitra.sdk.models.EstampValidateResult;
+import in.stampmitra.sdk.requests.DocumentUpload;
+import in.stampmitra.sdk.requests.EstampOrderRequest;
+import in.stampmitra.sdk.requests.EstampParty;
+import in.stampmitra.sdk.requests.EstampStampLine;
+import java.nio.file.Paths;
+
+EstampOrderRequest order = EstampOrderRequest.builder()
+        .reference("order-2026-0917")
+        .addStamp(EstampStampLine.builder().state("MH").articleCode("ART1").denomination(1000)
+                .firstParty(EstampParty.builder("Jane Doe").address("12 MG Road, Pune").build())
+                .secondParty("John Smith").purpose("Rental Agreement").build())
+        .build();
+
+EstampValidateResult check = client.estamp().orders().validate(order);          // dry run, not billed
+if (check.isValid()) {
+    EstampOrder created = client.estamp().orders()
+            .create(order, RequestOptions.withIdempotencyKey("lease-2026-0412-v1"));
+    client.estamp().orders().uploadDocument(created.getId(), DocumentUpload.of(Paths.get("pan.pdf")));
+    for (EstampStamp stamp : client.estamp().orders().listStamps(created.getId()).getItems()) {
+        EstampCertificate certificate = client.estamp().stamps().getCertificate(stamp.getId());
+        System.out.println(stamp.getId() + " " + (certificate.isAvailable() ? certificate.getDownloadUrl() : certificate.getStatus()));
+    }
+}
+```
+
+- **Parties** are a name string (`secondParty("John Smith")`) or an `EstampParty` object (`name`, `address`, `phone`,
+  `fatherHusbandName`, `gender`); use the object when the state wants an address or a father's or husband's name
+  (`client.estamp().getStateRequirements("MH", "ART1", new BigDecimal("1000"), "e_stamp")` returns the flags and an
+  `exampleBody`). `propertyArea` takes `EstampPropertyArea.of(Unit.SQUARE_FEET, 850)` or `EstampPropertyArea.notApplicable()`.
+- **The PAN card is advisory:** a `panCardImage` link on a line, `stamps().setPanCard(stampId, ...)` (HTTP 202, processed
+  asynchronously, then read `panCard.status` from `stamps().get`) or `orders().uploadDocument(...)` (PDF, JPEG or PNG up to
+  10 MB, sent as `multipart/form-data`) never blocks an order.
+- **Validation errors** list every finding: `e.getFieldErrors()` returns `field`, `code`, `message` and the stamp-line `index`.
+  A 402 names the short wallet: `e.getWallet()` is `STAMP_DUTY` or `SERVICE_FEE`; top it up and retry with the same key.
+- `orders().list(page, limit, cursor)` and the wallet `listTransactions` / `listInvoices` return one page with
+  `getNextCursor()`.
+
+Runnable: [`EstampOrderFlow.java`](examples/src/main/java/in/stampmitra/examples/EstampOrderFlow.java).
+
+### Wallets
+
+Orders are paid from two prepaid wallets, **Stamp Duty** and **Service Fee** (`client.estamp().getWallet()` reads both;
+`client.wallets().stampDuty()` and `.serviceFee()` have `getBalance`, `topup`, `listTransactions`, `listInvoices` and
+`getInvoice`). A **Stamp Duty top-up** adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you
+add, and a GST tax invoice for the fee is available from `listInvoices` / `getInvoice`. Read every figure from the response
+(`getTotalCharged()`, `getProcessingFeeAmount()`, `getGstAmount()`, `getCreditAmount()`): the SDK computes no fees and the rate
+can change. A top-up creates a payment order, so it is never retried automatically.
+
+```java
+import in.stampmitra.sdk.models.StampDutyWalletTopup;
+import in.stampmitra.sdk.requests.WalletTopupRequest;
+
+StampDutyWalletTopup topup = client.wallets().stampDuty().topup(WalletTopupRequest.builder().baseAmount(1000).build());
+System.out.println("pay " + topup.getTotalCharged() + " incl. fee " + topup.getProcessingFeeAmount()
+        + " and GST " + topup.getGstAmount() + "; wallet credited " + topup.getCreditAmount());
+```
+
+Runnable: [`EstampWallets.java`](examples/src/main/java/in/stampmitra/examples/EstampWallets.java).
+
 ## Errors
 
 All errors are unchecked and extend `in.stampmitra.sdk.errors.StampMitraException` (`getStatus()`, `getErrorCode()`,
-`getMessage()`, `getRequestId()`, `getField()`, `getBody()`, `getHeaders()`):
+`getMessage()`, `getRequestId()`, `getField()`, `getBody()`, `getHeaders()`, plus `getFieldErrors()`, `getWallet()` and
+`getDetails()` for the `error.details` of e-Stamp order errors):
 
 | HTTP | Exception |
 |------|-----------|
-| 400 (and local validation) | `ValidationException` |
+| 400, 422 (and local validation) | `ValidationException` (422 is `IDEMPOTENCY_KEY_REUSED`) |
 | 401 | `AuthenticationException` |
-| 402 | `PaymentRequiredException` |
+| 402 | `PaymentRequiredException` (`getWallet()` on e-Stamp orders) |
 | 403 | `PermissionException` (server message verbatim, e.g. IP allowlist) |
 | 404 | `NotFoundException` |
-| 409 | `ConflictException` |
+| 409 | `ConflictException` (`IDEMPOTENCY_IN_PROGRESS` is retried, see below) |
 | 429 | `RateLimitException` (`getRetryAfterSeconds()` when the header is present) |
 | 5xx | `UpstreamException` |
 | network / timeout | `ConnectionException` / `RequestTimeoutException` |
@@ -176,15 +253,19 @@ try {
 ## Retries and idempotency
 
 Default `maxRetries` is 2 (at most 3 attempts) with exponential backoff and full jitter (0.5 s base, 8 s cap);
-`Retry-After` is honoured when the server sends it (capped at 60 s). Retried: 429, 502, 503, 504, connection errors and
-timeouts. 4xx other than 429 is never retried.
+`Retry-After` (seconds) is honoured on 429, 503 and 409 `IDEMPOTENCY_IN_PROGRESS` (capped at 60 s). Retried: 429, 502, 503,
+504, connection errors and timeouts, and 409 `IDEMPOTENCY_IN_PROGRESS` when a key was sent. Any other 4xx is never retried.
 
 - `GET` is always retry-safe.
 - The SDK generates a random UUIDv4 `Idempotency-Key` (from the JDK's `SecureRandom`-backed `UUID.randomUUID()`) for
-  **every `POST` except webhook replay** and re-uses the **same key across automatic retries**. The API honours the header on
-  every metered call, so a retried verification replays the original result instead of billing twice. Pass your own key with
-  `RequestOptions.withIdempotencyKey("...")`.
-- A `POST` without a key (webhook replay) is never retried unless you supply one.
+  **every `POST` that takes one** (verification, duty, parties, orders, e-Stamp order creation, PAN card upload, payment
+  intents) and re-uses the **same key across automatic retries**. The API honours the header on every metered call, so a
+  retried verification replays the original result instead of billing twice. e-Stamp order creation *requires* the key
+  (without one the API answers 400 `IDEMPOTENCY_KEY_REQUIRED`). Pass your own key with `RequestOptions.withIdempotencyKey("...")`.
+- `POST /v1/estamp/orders/validate` is a retry-safe dry run (nothing created, not billed) and is retried without a key.
+- **Never retried automatically**, with or without a key: order cancel, stamp cancel, stamp replace, PAN card link, the
+  Stamp Duty and Service Fee wallet top-ups, and webhook replay. Their failures reach you as exceptions (`Retry-After`
+  is in `getHeaders()`); decide yourself whether repeating the call is safe.
 
 ```java
 import in.stampmitra.sdk.RequestOptions;
@@ -340,7 +421,7 @@ Per-call rates by plan, in rupees, excluding 18% GST:
 | IP allowlisting | No | No | Yes | Yes | Yes | Yes |
 | White-label and custom domain | No | No | No | Yes | No | Yes |
 
-Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total.
+Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total. API e-Stamp orders are charged per paper as a procurement charge plus an API charge (ex-GST); see the pricing page for current rates.
 
 ## Security
 
@@ -369,7 +450,7 @@ scripts/run-examples.sh            # run every example against the spec repo's m
 
 `spec/openapi.json` is a snapshot of the public spec; `SpecCoverageTest` fails if any `METHOD + path` in it has no SDK method
 (`mvn -q test -Dtest=SpecCoverageTest`). The conformance suite (`src/test/java/.../conformance`) starts the spec repo's mock
-server and exercises all 31 operations; set `STAMPMITRA_SPEC_DIR` to a checkout of `stampmitra-developer-openapi`. See
+server and exercises all 62 operations; set `STAMPMITRA_SPEC_DIR` to a checkout of `stampmitra-developer-openapi`. See
 [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md) and [SECURITY.md](SECURITY.md).
 
 Licensed under the [MIT License](LICENSE). Copyright Bani Global Industries LLP (StampMitra).

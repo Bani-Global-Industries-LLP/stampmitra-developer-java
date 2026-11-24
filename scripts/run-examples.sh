@@ -24,7 +24,7 @@ export STAMPMITRA_WEBHOOK_SECRET="whsec_test_demo"
 
 cd "$root/examples"
 mvn -B -q compile
-for example in VerifyPan CreateOrder LogsPagination AsyncVerify OkHttpTransportExample; do
+for example in VerifyPan CreateOrder EstampOrderFlow EstampWallets LogsPagination AsyncVerify OkHttpTransportExample; do
   echo "=== $example"
   mvn -B -q exec:java -Dexec.mainClass="in.stampmitra.examples.$example"
 done
