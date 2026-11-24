@@ -228,9 +228,11 @@ class RetryTest {
         assertThatThrownBy(() -> client(t).webhooks().events().replay("evt_1")).isInstanceOf(UpstreamException.class);
         assertThat(t.requests()).hasSize(1);
 
+        // webhook replay is marked never-retry: even a caller supplied key does not make it retryable
         FakeTransport withKey = new FakeTransport().then(503, ERR).thenOk("{}");
-        client(withKey).webhooks().events().replay("evt_1", RequestOptions.withIdempotencyKey("k"));
-        assertThat(withKey.requests()).hasSize(2);
+        assertThatThrownBy(() -> client(withKey).webhooks().events().replay("evt_1", RequestOptions.withIdempotencyKey("k")))
+                .isInstanceOf(UpstreamException.class);
+        assertThat(withKey.requests()).hasSize(1);
     }
 
     @Test
