@@ -61,9 +61,73 @@ const MODEL_NAMES = {
   UsageSummary: "UsageSummary",
   LogEntry: "LogEntry",
   LogsPage: "LogPage",
+  // nested identity-result objects (contract 1.2.0)
+  GstinSplitAddress: "GstinSplitAddress",
+  GstinAdditionalAddress: "GstinAdditionalAddress",
+  VoterIdSplitAddress: "VoterIdSplitAddress",
+  DrivingLicenseSplitAddress: "DrivingLicenseSplitAddress",
+  DrivingLicenseAddressEntry: "DrivingLicenseAddressEntry",
+  DrivingLicenseBadgeDetail: "DrivingLicenseBadgeDetail",
+  DrivingLicenseValidityPeriod: "DrivingLicenseValidityPeriod",
+  DrivingLicenseValidity: "DrivingLicenseValidity",
+  DrivingLicenseDetails: "DrivingLicenseDetails",
+  CinDirectorDetail: "CinDirectorDetail",
+  UdyamClassificationHistoryEntry: "UdyamClassificationHistoryEntry",
+  UdyamSplitAddress: "UdyamSplitAddress",
+  UdyamUnitLocation: "UdyamUnitLocation",
+  UdyamNicCode: "UdyamNicCode",
+  // account, e-Stamp and wallets (contract 1.2.0); the schema name is the class name
+  AccountBalance: "AccountBalance",
+  AccountUsage: "AccountUsage",
+  EstampStateAvailability: "EstampStateAvailability",
+  EstampStatesAvailability: "EstampStatesAvailability",
+  EstampState: "EstampState",
+  EstampDistrict: "EstampDistrict",
+  EstampDistrictList: "EstampDistrictList",
+  EstampSro: "EstampSro",
+  EstampSroList: "EstampSroList",
+  EstampRequirements: "EstampRequirements",
+  EstampOrderQuote: "EstampOrderQuote",
+  EstampValidationIssue: "EstampValidationIssue",
+  EstampDocumentRequirement: "EstampDocumentRequirement",
+  EstampOrderCounts: "EstampOrderCounts",
+  EstampValidateResult: "EstampValidateResult",
+  EstampOrderStampRef: "EstampOrderStampRef",
+  EstampOrderAdvisory: "EstampOrderAdvisory",
+  EstampOrder: "EstampOrder",
+  EstampOrderList: "EstampOrderList",
+  EstampOrderExport: "EstampOrderExport",
+  EstampPanCardStatus: "EstampPanCardStatus",
+  EstampStamp: "EstampStamp",
+  EstampStampList: "EstampStampList",
+  EstampPanCardResult: "EstampPanCardResult",
+  EstampDocument: "EstampDocument",
+  EstampCertificate: "EstampCertificate",
+  EstampWalletPart: "EstampWalletPart",
+  EstampWallet: "EstampWallet",
+  WalletBalance: "WalletBalance",
+  StampDutyWalletTopup: "StampDutyWalletTopup",
+  StampDutyWalletInvoice: "StampDutyWalletInvoice",
+  StampDutyWalletInvoicesPage: "StampDutyWalletInvoicesPage",
+  ServiceFeeWalletTopup: "ServiceFeeWalletTopup",
+  WalletTransaction: "WalletTransaction",
+  WalletTransactionsPage: "WalletTransactionsPage",
+  WalletInvoice: "WalletInvoice",
+  WalletInvoicesPage: "WalletInvoicesPage",
 };
 
-function modelProp(key, prop, required) {
+/** Follows a $ref (also through oneOf/anyOf of one real alternative and null) to the schema it names. */
+function resolveProp(prop) {
+  let p = prop;
+  const alts = (p.oneOf ?? p.anyOf ?? []).filter((a) => a.type !== "null");
+  if (!p.type && !p.$ref && alts.length === 1) p = { ...alts[0], description: prop.description ?? alts[0].description };
+  return p;
+}
+
+function modelProp(key, prop0, required) {
+  let prop = resolveProp(prop0);
+  // a $ref that is not a generated model is read as the schema it points at (an object becomes a Map, and so on)
+  if (prop.$ref && !MODEL_NAMES[refName(prop)]) prop = { ...schemas[refName(prop)], description: prop.description ?? schemas[refName(prop)].description };
   const base = getterBase(key);
   const doc = prop.description ? esc(prop.description) : `The {@code ${key}} field.`;
   const ref = refName(prop);
@@ -122,11 +186,39 @@ function modelProp(key, prop, required) {
   return { type, name, expr, doc, ret };
 }
 
+function genListModel(schemaName, cls) {
+  const s = schemas[schemaName];
+  const item = MODEL_NAMES[refName(s.items)];
+  const desc = esc(s.description);
+  let out = `${HEADER}package ${PKG}.models;\n\nimport in.stampmitra.sdk.ResponseInfo;\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Map;\n\n`;
+  out += `/**\n * ${desc} The model is iterable over its {@link ${item}} entries.\n */\npublic final class ${cls} extends Model implements Iterable<${item}> {\n\n`;
+  out += `    /**\n     * Creates a model without HTTP metadata.\n     *\n     * @param raw the decoded body; the array is under {@code "items"}\n     */\n    public ${cls}(Map<String, Object> raw) {\n        this(raw, null);\n    }\n\n`;
+  out += `    /**\n     * Creates a model.\n     *\n     * @param raw      the decoded body; the array is under {@code "items"}\n     * @param response HTTP metadata, may be {@code null}\n     */\n    public ${cls}(Map<String, Object> raw, ResponseInfo response) {\n        super(raw, response);\n    }\n\n`;
+  out += `    /**\n     * The entries.\n     *\n     * @return an unmodifiable list, empty when there are none\n     */\n    public List<${item}> getItems() {\n        return models("items", ${item}::new);\n    }\n\n`;
+  out += `    /**\n     * Number of entries.\n     *\n     * @return the count\n     */\n    public int size() {\n        return getItems().size();\n    }\n\n`;
+  out += `    @Override\n    public Iterator<${item}> iterator() {\n        return getItems().iterator();\n    }\n}\n`;
+  files.set(resolve(outDir("models"), `${cls}.java`), out);
+}
+
 function genModel(schemaName, cls) {
   const s = schemas[schemaName];
+  if (s.type === "array") return genListModel(schemaName, cls);
   const props = Object.entries(s.properties ?? {});
   const req = new Set(s.required ?? []);
-  const lines = props.map(([k, p]) => modelProp(k, p, req.has(k)));
+  // A key that differs from another only by case (gstin / GSTIN) yields one getter that reads the lower-case key and
+  // falls back to the upper-case one, so older bodies keep working.
+  const lower = new Set(props.map(([k]) => k).filter((k) => k !== k.toUpperCase()).map((k) => k.toLowerCase()));
+  const lines = props
+    .filter(([k]) => !(k === k.toUpperCase() && lower.has(k.toLowerCase())))
+    .map(([k, p]) => {
+      const l = modelProp(k, p, req.has(k));
+      const upper = props.find(([u]) => u !== k && u === u.toUpperCase() && u.toLowerCase() === k.toLowerCase());
+      if (upper && l.type === "String") {
+        l.expr = `string("${k}") != null ? string("${k}") : string("${upper[0]}")`;
+        l.doc += ` Older bodies that only carry {@code ${upper[0]}} are read too.`;
+      }
+      return l;
+    });
   const imports = new Set(["in.stampmitra.sdk.ResponseInfo", "java.util.Map"]);
   for (const l of lines) {
     if (l.type.includes("Instant")) imports.add("java.time.Instant");
@@ -154,7 +246,10 @@ const REQUESTS = {
   CreatePaymentIntentRequest: "CreatePaymentIntentRequest",
   EstampDutyCalculateRequest: "EstampDutyCalculateRequest",
   EstampPartiesRequest: "EstampPartiesRequest",
+  EstampPanCardRequest: "EstampPanCardRequest",
+  WalletTopupRequest: "WalletTopupRequest",
 };
+// Hand-written request types (nested bodies): EstampOrderRequest, EstampStampLine, EstampParty, EstampPropertyArea, DocumentUpload.
 
 function genRequest(schemaName, cls) {
   const s = schemas[schemaName];
@@ -186,7 +281,14 @@ function genRequest(schemaName, cls) {
       const range = p.maxLength !== undefined ? `${p.minLength ?? 0}-${p.maxLength}` : `at least ${p.minLength}`;
       len = `        if (body.get("${k}") != null && (${conds.join(" || ")})) {\n            throw new ValidationException("${k}", "${k} must be ${range} characters");\n        }\n`;
     }
-    checks.push(present + len);
+    let extra = "";
+    if (type === "String" && p.pattern) {
+      extra = `        if (body.get("${k}") != null && !java.util.regex.Pattern.compile(${JSON.stringify(p.pattern)}).matcher(String.valueOf(body.get("${k}"))).find()) {\n            throw new ValidationException("${k}", "${k} must match ${esc(p.pattern).replace(/"/g, "'")}");\n        }\n`;
+    }
+    if (type === "BigDecimal" && p.exclusiveMinimum !== undefined) {
+      extra = `        if (body.get("${k}") instanceof Number && new BigDecimal(String.valueOf(body.get("${k}"))).compareTo(BigDecimal.valueOf(${p.exclusiveMinimum})) <= 0) {\n            throw new ValidationException("${k}", "${k} must be greater than ${p.exclusiveMinimum}");\n        }\n`;
+    }
+    checks.push(present + len + extra);
   }
   const desc = esc(s.description ?? `Request body of the {@code ${schemaName}} operation.`);
   let out = `${HEADER}package ${PKG}.requests;\n\n`;
@@ -216,6 +318,7 @@ for (const [schema, cls] of Object.entries(REQUESTS)) genRequest(schema, cls);
 // ---------------------------------------------------------------- resources
 // arg: { name, type, json, required, validate: (v) => expr, in: 'body' | 'query' }
 const S = (name, json, required, validate, doc) => ({ name, type: "String", json: json ?? name, required, validate, in: "body", doc });
+const Q = (name, type, doc) => ({ name, type, json: name, required: false, in: "query", doc });
 const v = (fn) => (x) => `Validators.${fn}(${x})`;
 const nameV = (field) => (x) => `Validators.name(${x}, "${field}")`;
 const dateV = (field) => (x) => `Validators.date(${x}, "${field}")`;
@@ -251,8 +354,18 @@ const resources = [
   },
   {
     cls: "EstampResource",
-    doc: "e-Stamp Paper reference data and helpers (`client.estamp()`). The API does not fix the e-Stamp field shapes, so results are {@link GenericResponse}.",
+    doc: "e-Stamp Paper (`client.estamp()`): reference data, duty, parties and the typed order and stamp sub-resources. The older reference-data routes return {@link GenericResponse} because the API does not fix their shapes; the routes added in contract 1.2.0 are typed.",
+    subs: [
+      { name: "orders", cls: "EstampOrdersResource", doc: "e-Stamp orders: validate, create, list, get, cancel, export, stamps and PAN card upload." },
+      { name: "stamps", cls: "EstampStampsResource", doc: "Single stamps: get, cancel, replace, PAN card link and certificate." },
+    ],
     ops: [
+      { name: "getStatesAvailability", http: ["GET", "/v1/estamp/states/availability"], ret: "EstampStatesAvailability", doc: "Lists every state with its e-Stamp and traditional-stamp availability.", args: [Q("active", "Boolean", "{@code true} to return only the states accepting orders right now, or {@code null} for all")] },
+      { name: "getState", http: ["GET", "/v1/estamp/states/{stateCode}"], ret: "EstampState", doc: "Fetches one state with its requirement flags.", args: [], path: [{ name: "stateCode", doc: "the state code, for example {@code MH}" }] },
+      { name: "getStateRequirements", http: ["GET", "/v1/estamp/states/{stateCode}/requirements"], ret: "EstampRequirements", doc: "Fetches what a state requires for an article and denomination; the result includes a ready-to-edit {@code exampleBody}.", args: [Q("articleCode", "String", "the article code from the instruments route, or {@code null}"), Q("denomination", "BigDecimal", "face value in rupees, or {@code null}"), Q("category", "String", "{@code e_stamp} or {@code traditional_stamp}, or {@code null}")], path: [{ name: "stateCode", doc: "the state code, for example {@code MH}" }] },
+      { name: "listDistricts", http: ["GET", "/v1/estamp/states/{stateCode}/districts"], ret: "EstampDistrictList", doc: "Lists the districts of a state.", args: [], path: [{ name: "stateCode", doc: "the state code" }] },
+      { name: "listSros", http: ["GET", "/v1/estamp/states/{stateCode}/districts/{districtCode}/sros"], ret: "EstampSroList", doc: "Lists the sub-registrar offices of a district.", args: [], path: [{ name: "stateCode", doc: "the state code" }, { name: "districtCode", doc: "the district code" }] },
+      { name: "getWallet", http: ["GET", "/v1/estamp/wallet"], ret: "EstampWallet", doc: "Fetches both fulfilment wallets (Stamp Duty and Service Fee) in one call. Needs both wallet read scopes.", args: [] },
       { name: "getSchema", http: ["GET", "/v1/estamp/schema/{serviceCode}"], ret: "GenericResponse", doc: "Fetches the input field schema of an e-Stamp service.", args: [], path: [{ name: "serviceCode", doc: "the e-Stamp service code" }] },
       { name: "listStates", http: ["GET", "/v1/estamp/states"], ret: "GenericResponse", doc: "Lists the states where e-Stamp is available.", args: [] },
       { name: "listInstruments", http: ["GET", "/v1/estamp/states/{stateCode}/instruments"], ret: "GenericResponse", doc: "Lists the instruments of a state.", args: [], path: [{ name: "stateCode", doc: "the state code, for example {@code MH}" }] },
@@ -271,6 +384,65 @@ const resources = [
       { name: "getPayment", http: ["GET", "/v1/orders/{id}/payment"], ret: "OrderPaymentResponse", doc: "Fetches the payment of an order.", args: [], path: [{ name: "id", doc: "the {@code externalOrderId}" }] },
       { name: "listDocuments", http: ["GET", "/v1/orders/{id}/documents"], ret: "OrderDocumentsResponse", doc: "Lists the documents of an order.", args: [], path: [{ name: "id", doc: "the {@code externalOrderId}" }] },
       { name: "getDocumentDownload", http: ["GET", "/v1/orders/{id}/documents/{documentId}/download"], ret: "DocumentDownloadUrl", doc: "Gets a short-lived download URL for a document.", args: [], path: [{ name: "id", doc: "the {@code externalOrderId}" }, { name: "documentId", doc: "the document id" }] },
+    ],
+  },
+  {
+    cls: "EstampOrdersResource",
+    doc: "e-Stamp orders (`client.estamp().orders()`). Orders are identified by the {@code id} that {@code create} returns. Order creation spends money and needs an {@code Idempotency-Key}: one is generated unless you pass one in the options.",
+    ops: [
+      { name: "validate", http: ["POST", "/v1/estamp/orders/validate"], ret: "EstampValidateResult", idem: false, doc: "Dry-runs an order: nothing is created and nothing is billed. Safe to retry, and takes no {@code Idempotency-Key}.", body: "EstampOrderRequest" },
+      { name: "create", http: ["POST", "/v1/estamp/orders"], ret: "EstampOrder", idem: true, doc: "Creates an order. The API requires an {@code Idempotency-Key}: one is generated unless you pass one in the options, and the same key is reused across automatic retries, so a retried call never creates a second order. Persist your own key before sending when you need to resume after a crash.", body: "EstampOrderRequest" },
+      {
+        name: "list", http: ["GET", "/v1/estamp/orders"], ret: "EstampOrderList", doc: "Lists your orders, newest first. Continue with {@code getNextCursor()} as {@code cursor}.",
+        args: [Q("page", "Integer", "page number from 1 (ignored when a cursor is sent), or {@code null}"), Q("limit", "Integer", "page size 1 to 100, or {@code null} for the default"), Q("cursor", "String", "the {@code nextCursor} of the previous page, or {@code null}")],
+      },
+      { name: "get", http: ["GET", "/v1/estamp/orders/{id}"], ret: "EstampOrder", doc: "Fetches an order.", args: [], path: [{ name: "id", doc: "the order id" }] },
+      { name: "cancel", http: ["POST", "/v1/estamp/orders/{id}/cancel"], ret: "EstampOrder", idem: false, doc: "Cancels an order. Never retried automatically.", args: [], path: [{ name: "id", doc: "the order id" }] },
+      { name: "export", http: ["GET", "/v1/estamp/orders/{id}/export"], ret: "EstampOrderExport", doc: "Exports an order as CSV.", args: [], path: [{ name: "id", doc: "the order id" }] },
+      { name: "listStamps", http: ["GET", "/v1/estamp/orders/{id}/stamps"], ret: "EstampStampList", doc: "Lists the stamps of an order.", args: [], path: [{ name: "id", doc: "the order id" }] },
+      { name: "uploadDocument", http: ["POST", "/v1/estamp/orders/{orderId}/documents"], ret: "EstampDocument", idem: true, multipart: true, doc: "Uploads the payer's PAN card (PDF, JPEG or PNG, at most 10 MB) as {@code multipart/form-data}. The PAN card is advisory and never blocks an order. An {@code Idempotency-Key} is generated unless you pass one, and reused across automatic retries.", path: [{ name: "orderId", doc: "the order id" }] },
+    ],
+  },
+  {
+    cls: "EstampStampsResource",
+    doc: "e-Stamp stamps (`client.estamp().stamps()`). Cancel, replace and PAN card link are never retried automatically.",
+    ops: [
+      { name: "get", http: ["GET", "/v1/estamp/stamps/{stampId}"], ret: "EstampStamp", doc: "Fetches a stamp, including its {@code panCard} status.", args: [], path: [{ name: "stampId", doc: "the stamp id" }] },
+      { name: "cancel", http: ["POST", "/v1/estamp/stamps/{stampId}/cancel"], ret: "EstampStamp", idem: false, doc: "Cancels a stamp. Never retried automatically.", args: [], path: [{ name: "stampId", doc: "the stamp id" }] },
+      { name: "replace", http: ["POST", "/v1/estamp/stamps/{stampId}/replace"], ret: "EstampStamp", idem: false, doc: "Replaces a stamp. Never retried automatically.", args: [], path: [{ name: "stampId", doc: "the stamp id" }] },
+      { name: "setPanCard", http: ["POST", "/v1/estamp/stamps/{stampId}/pan-card"], ret: "EstampPanCardResult", idem: false, doc: "Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). Advisory: it never blocks the stamp. Never retried automatically.", path: [{ name: "stampId", doc: "the stamp id" }], body: "EstampPanCardRequest" },
+      { name: "getCertificate", http: ["GET", "/v1/estamp/stamps/{stampId}/certificate"], ret: "EstampCertificate", doc: "Fetches the certificate download link once it is available ({@code isAvailable()}).", args: [], path: [{ name: "stampId", doc: "the stamp id" }] },
+    ],
+  },
+  {
+    cls: "WalletsResource",
+    doc: "Fulfilment wallets (`client.wallets()`): the Stamp Duty and Service Fee wallets.",
+    subs: [
+      { name: "stampDuty", cls: "StampDutyWalletResource", doc: "The Stamp Duty wallet." },
+      { name: "serviceFee", cls: "ServiceFeeWalletResource", doc: "The Service Fee wallet." },
+    ],
+    ops: [],
+  },
+  ...[
+    ["StampDutyWalletResource", "stampDuty", "/v1/stamp-duty-wallet", "StampDutyWalletTopup", "StampDutyWalletInvoicesPage", "StampDutyWalletInvoice", "Stamp Duty wallet", " The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing."],
+    ["ServiceFeeWalletResource", "serviceFee", "/v1/service-fee-wallet", "ServiceFeeWalletTopup", "WalletInvoicesPage", "WalletInvoice", "Service Fee wallet", " The top-up adds GST on the amount; every amount in the response is a string."],
+  ].map(([cls, acc, base, topup, invPage, inv, label, feeDoc]) => ({
+    cls,
+    doc: `The ${label} (\`client.wallets().${acc}()\`). Top-ups are never retried automatically.`,
+    ops: [
+      { name: "getBalance", http: ["GET", base], ret: "WalletBalance", doc: `Fetches the ${label} balance.`, args: [] },
+      { name: "topup", http: ["POST", `${base}/topup`], ret: topup, idem: false, doc: `Starts a ${label} top-up: creates a payment order and a tax invoice.${feeDoc} Never retried automatically.`, body: "WalletTopupRequest" },
+      { name: "listTransactions", http: ["GET", `${base}/transactions`], ret: "WalletTransactionsPage", doc: `Lists ${label} transactions, newest first.`, args: [Q("limit", "Integer", "page size, or {@code null} for the default"), Q("cursor", "String", "the {@code nextCursor} of the previous page, or {@code null}")] },
+      { name: "listInvoices", http: ["GET", `${base}/invoices`], ret: invPage, doc: `Lists the GST tax invoices of ${label} top-ups.`, args: [Q("limit", "Integer", "page size, or {@code null} for the default"), Q("cursor", "String", "the {@code nextCursor} of the previous page, or {@code null}")] },
+      { name: "getInvoice", http: ["GET", `${base}/invoices/{id}`], ret: inv, doc: `Fetches one ${label} tax invoice.`, args: [], path: [{ name: "id", doc: "the invoice id" }] },
+    ],
+  })),
+  {
+    cls: "AccountResource",
+    doc: "Account balance and usage (`client.account()`).",
+    ops: [
+      { name: "getBalance", http: ["GET", "/v1/account/balance"], ret: "AccountBalance", doc: "Fetches the API credit balance and low-balance state.", args: [] },
+      { name: "getUsage", http: ["GET", "/v1/account/usage"], ret: "AccountUsage", doc: "Fetches today's, this month's and last month's usage and the limits.", args: [] },
     ],
   },
   {
@@ -316,7 +488,14 @@ function genResource(r) {
   const methods = [];
   for (const op of r.ops) {
     const cn = constName(op);
-    consts.push(`    private static final Operation ${cn} = Operation.${op.http[0].toLowerCase()}("${op.http[1]}");`);
+    const specOp = spec.paths[op.http[1]]?.[op.http[0].toLowerCase()];
+    if (!specOp) throw new Error(`not in spec: ${op.http.join(" ")}`);
+    const hasKeyParam = JSON.stringify(specOp.parameters ?? []).includes("IdempotencyKey") || JSON.stringify(specOp.parameters ?? []).includes('"Idempotency-Key"');
+    if (op.http[0] === "POST" && !!op.idem !== hasKeyParam) throw new Error(`idem flag disagrees with the spec for ${op.http.join(" ")}`);
+    let flags = "";
+    if (op.http[0] === "POST" && specOp["x-retry-safe"] === false) flags = ".neverRetry()";
+    else if (op.http[0] === "POST" && specOp["x-retry-safe"] === true && !hasKeyParam) flags = ".retrySafe()";
+    consts.push(`    private static final Operation ${cn} = Operation.${op.http[0].toLowerCase()}("${op.http[1]}")${flags};`);
     imports.add(`in.stampmitra.sdk.models.${op.ret}`);
     const path = op.path ?? [];
     const pathSig = path.map((p) => `String ${p.name}`);
@@ -340,6 +519,22 @@ function genResource(r) {
     const emit = (jsdoc, sig, body) => methods.push(`${jsdoc}${sig} {\n${body}    }\n`);
     const throwsDoc = "     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors";
 
+    if (op.multipart) {
+      imports.add("in.stampmitra.sdk.internal.Args");
+      imports.add("in.stampmitra.sdk.internal.Multipart");
+      imports.add("in.stampmitra.sdk.requests.DocumentUpload");
+      for (const withOpts of [false, true]) {
+        const sig = `public ${op.ret} ${op.name}(${[...pathSig, "DocumentUpload file", ...(withOpts ? [sigOpts] : [])].join(", ")})`;
+        const jsdoc = `    /**\n     * ${op.doc}\n     *\n${[...pathDoc, "     * @param file the file to upload", ...(withOpts ? [optDoc] : [])].join("\n")}\n     * @return the result\n${throwsDoc}\n     */\n    `;
+        const body = withOpts
+          ? `        DocumentUpload upload = Args.required(file, "file");\n        if (validateInput) {\n            upload.validate();\n        }\n        Multipart body = Multipart.create()\n                .file("file", upload.getFilename(), upload.getContentType(), upload.getContent())\n                .text("type", "pan_card");\n        return executor.execute(${cn}, ${cn}.render(${pathCall.join(", ")}), null, body, options, ${idem}, ${op.ret}::new);\n`
+          : `        return ${op.name}(${[...pathCall, "file", "(RequestOptions) null"].join(", ")});\n`;
+        emit(jsdoc, sig, body);
+        const ajsdoc = `    /**\n     * Asynchronous variant of {@link #${op.name}(${[...path.map(() => "String"), "DocumentUpload", ...(withOpts ? ["RequestOptions"] : [])].join(", ")})}. Failures, including validation errors, complete the future exceptionally;\n     * {@code cancel(true)} interrupts the call.\n     *\n${[...pathDoc, "     * @param file the file to upload", ...(withOpts ? [optDoc] : [])].join("\n")}\n     * @return a future of the result\n     */\n    `;
+        emit(ajsdoc, `public CompletableFuture<${op.ret}> ${op.name}Async(${[...pathSig, "DocumentUpload file", ...(withOpts ? [sigOpts] : [])].join(", ")})`, `        return executor.async(() -> ${op.name}(${[...pathCall, "file", ...(withOpts ? ["options"] : [])].join(", ")}));\n`);
+      }
+      continue;
+    }
     if (op.body) {
       for (const vr of variantsList) {
         const reqDoc = vr.mapType ? "the request body as a map (unmodelled fields allowed)" : "the request";
@@ -374,6 +569,7 @@ function genResource(r) {
     const sets = [required];
     if (args.length > required.length) sets.push(args);
     const full = sets[sets.length - 1];
+    for (const a of args) if (a.type === "BigDecimal") imports.add("java.math.BigDecimal");
     for (const set of sets) {
       for (const withOpts of [false, true]) {
         const params = [...pathSig, ...set.map((a) => `${a.type} ${a.name}`), ...(withOpts ? [sigOpts] : [])];
@@ -406,7 +602,11 @@ function genResource(r) {
             imports.add("java.util.Map");
             imports.add("java.util.LinkedHashMap");
             body += `        Map<String, String> query = new LinkedHashMap<>();\n`;
-            for (const a of queryArgs) body += `        if (${a.name} != null) {\n            query.put("${a.json}", String.valueOf(${a.name}));\n        }\n`;
+            for (const a of queryArgs) {
+              if (a.type === "BigDecimal") imports.add("java.math.BigDecimal");
+              const val = a.type === "BigDecimal" ? `${a.name}.toPlainString()` : `String.valueOf(${a.name})`;
+              body += `        if (${a.name} != null) {\n            query.put("${a.json}", ${val});\n        }\n`;
+            }
           }
           const renderArgs = pathCall.join(", ");
           body += `        return executor.execute(${cn}, ${cn}.render(${renderArgs}), ${queryArgs.length ? "query" : "null"}, ${bodyArgs.length ? "body" : "null"}, options, ${idem}, ${op.ret}::new);\n`;
@@ -421,12 +621,19 @@ function genResource(r) {
       }
     }
   }
+  const bodyText = methods.join("\n") + (r.subs ?? []).map((x) => x.cls).join(" ") + consts.join("\n") + " RequestExecutor ";
+  const used = [...imports].filter((i) => new RegExp(`\\b${i.split(".").pop()}\\b`).test(bodyText));
   let out = `${HEADER}package ${PKG}.resources;\n\n`;
-  out += [...imports].sort().map((i) => `import ${i};`).join("\n") + "\n\n";
+  out += used.sort().map((i) => `import ${i};`).join("\n") + "\n\n";
   out += `/**\n * ${r.doc.replace(/`([^`]+)`/g, "{@code $1}")}\n */\npublic final class ${r.cls} {\n\n`;
-  out += consts.join("\n") + "\n\n";
-  out += `    private final RequestExecutor executor;\n    private final boolean validateInput;\n\n`;
-  out += `    /**\n     * Creates the resource. Use the accessor on {@link in.stampmitra.sdk.StampMitra} instead.\n     *\n     * @param executor      the shared request executor\n     * @param validateInput whether to validate inputs locally before sending\n     */\n    public ${r.cls}(RequestExecutor executor, boolean validateInput) {\n        this.executor = executor;\n        this.validateInput = validateInput;\n    }\n\n`;
+  out += consts.length ? consts.join("\n") + "\n\n" : "";
+  const subs = r.subs ?? [];
+  out += `    private final RequestExecutor executor;\n    private final boolean validateInput;\n`;
+  for (const sub of subs) out += `    private final ${sub.cls} ${sub.name};\n`;
+  out += "\n";
+  out += `    /**\n     * Creates the resource. Use the accessor on {@link in.stampmitra.sdk.StampMitra} instead.\n     *\n     * @param executor      the shared request executor\n     * @param validateInput whether to validate inputs locally before sending\n     */\n    public ${r.cls}(RequestExecutor executor, boolean validateInput) {\n        this.executor = executor;\n        this.validateInput = validateInput;\n${subs.map((x) => `        this.${x.name} = new ${x.cls}(executor, validateInput);\n`).join("")}    }\n`;
+  for (const sub of subs) out += `\n    /**\n     * ${sub.doc}\n     *\n     * @return the ${sub.name} resource\n     */\n    public ${sub.cls} ${sub.name}() {\n        return ${sub.name};\n    }\n`;
+  out += methods.length ? "\n" : "";
   out += methods.join("\n");
   out += "}\n";
   files.set(resolve(outDir("resources"), `${r.cls}.java`), out);

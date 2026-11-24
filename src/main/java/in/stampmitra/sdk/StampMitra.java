@@ -6,6 +6,7 @@ import in.stampmitra.sdk.http.HttpTransport;
 import in.stampmitra.sdk.http.JdkHttpTransport;
 import in.stampmitra.sdk.internal.RequestExecutor;
 import in.stampmitra.sdk.internal.Secret;
+import in.stampmitra.sdk.resources.AccountResource;
 import in.stampmitra.sdk.resources.EstampResource;
 import in.stampmitra.sdk.resources.LogsResource;
 import in.stampmitra.sdk.resources.OrdersResource;
@@ -13,6 +14,7 @@ import in.stampmitra.sdk.resources.PaymentsResource;
 import in.stampmitra.sdk.resources.ServicesResource;
 import in.stampmitra.sdk.resources.UsageResource;
 import in.stampmitra.sdk.resources.VerifyResource;
+import in.stampmitra.sdk.resources.WalletsResource;
 import in.stampmitra.sdk.resources.WebhooksResource;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -45,7 +47,7 @@ import java.util.regex.Pattern;
 public final class StampMitra {
 
     /** SDK version, also sent in the {@code User-Agent} header. */
-    public static final String VERSION = "0.1.0";
+    public static final String VERSION = "0.2.0";
     /** Production and sandbox base URL (the key prefix {@code sk_test_} or {@code sk_live_} selects the mode). */
     public static final String DEFAULT_BASE_URL = "https://api-b2b.stampmitra.in";
     /** Environment variable read when no API key is passed to the builder. */
@@ -64,6 +66,8 @@ public final class StampMitra {
     private final UsageResource usage;
     private final LogsResource logs;
     private final WebhooksResource webhooks;
+    private final WalletsResource wallets;
+    private final AccountResource account;
 
     private StampMitra(Builder b) {
         String key = b.apiKey;
@@ -117,6 +121,8 @@ public final class StampMitra {
         this.usage = new UsageResource(executor, b.validateInput);
         this.logs = new LogsResource(executor, b.validateInput);
         this.webhooks = new WebhooksResource(executor, b.validateInput);
+        this.wallets = new WalletsResource(executor, b.validateInput);
+        this.account = new AccountResource(executor, b.validateInput);
     }
 
     /**
@@ -126,6 +132,24 @@ public final class StampMitra {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Fulfilment wallets: {@code stampDuty()} and {@code serviceFee()}.
+     *
+     * @return the wallets resource
+     */
+    public WalletsResource wallets() {
+        return wallets;
+    }
+
+    /**
+     * Account balance and usage.
+     *
+     * @return the account resource
+     */
+    public AccountResource account() {
+        return account;
     }
 
     /**

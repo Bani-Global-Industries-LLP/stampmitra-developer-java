@@ -192,7 +192,7 @@ class ConformanceTest {
         assertThat(r.get("method").asText()).isEqualTo(op.method);
         assertThat(r.get("path").asText()).isEqualTo(op.path);
         assertThat(r.get("headers").get("authorization").asText()).isEqualTo("Bearer " + KEY);
-        assertThat(r.get("headers").get("user-agent").asText()).startsWith("stampmitra-java/0.1.0 (Java ");
+        assertThat(r.get("headers").get("user-agent").asText()).startsWith("stampmitra-java/0.2.0 (Java ");
         assertThat(r.get("headers").get("accept").asText()).isEqualTo("application/json");
         if (op.method.equals("POST") && !op.template.endsWith("/replay")) {
             assertThat(r.get("headers").get("idempotency-key").asText()).matches(UUID_V4);

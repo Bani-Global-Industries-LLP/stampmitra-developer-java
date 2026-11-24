@@ -2,10 +2,11 @@
 package in.stampmitra.sdk.models;
 
 import in.stampmitra.sdk.ResponseInfo;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Result of a GSTIN verification.
+ * Result of a GSTIN verification: the full registration record. Every field except referenceId, verificationId, gstin, GSTIN and valid is optional and is omitted when the registry does not provide it.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -40,16 +41,25 @@ public final class GstinVerification extends Model {
     }
 
     /**
-     * The GSTIN that was verified.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
      *
-     * @return the {@code GSTIN} field, or {@code null} when absent
+     * @return the {@code verificationId} field, or {@code null} when absent
      */
-    public String getGstin() {
-        return string("GSTIN");
+    public String getVerificationId() {
+        return string("verificationId");
     }
 
     /**
-     * Whether the GSTIN exists and is valid.
+     * The GSTIN that was verified. Always present; on an unknown GSTIN it is the number you sent. Older bodies that only carry {@code GSTIN} are read too.
+     *
+     * @return the {@code gstin} field, or {@code null} when absent
+     */
+    public String getGstin() {
+        return string("gstin") != null ? string("gstin") : string("GSTIN");
+    }
+
+    /**
+     * Whether the GSTIN exists and is registered. Always present.
      *
      * @return the {@code valid} flag ({@code false} when the field is absent)
      */
@@ -58,7 +68,133 @@ public final class GstinVerification extends Model {
     }
 
     /**
-     * Legal name of the registrant.
+     * Legal name of the business registered against this GSTIN.
+     *
+     * @return the {@code legalNameOfBusiness} field, or {@code null} when absent
+     */
+    public String getLegalNameOfBusiness() {
+        return string("legalNameOfBusiness");
+    }
+
+    /**
+     * Trade name of the business, when it has one.
+     *
+     * @return the {@code tradeNameOfBusiness} field, or {@code null} when absent
+     */
+    public String getTradeNameOfBusiness() {
+        return string("tradeNameOfBusiness");
+    }
+
+    /**
+     * Central tax jurisdiction (range) of the registration.
+     *
+     * @return the {@code centerJurisdiction} field, or {@code null} when absent
+     */
+    public String getCenterJurisdiction() {
+        return string("centerJurisdiction");
+    }
+
+    /**
+     * State tax jurisdiction of the registration.
+     *
+     * @return the {@code stateJurisdiction} field, or {@code null} when absent
+     */
+    public String getStateJurisdiction() {
+        return string("stateJurisdiction");
+    }
+
+    /**
+     * Date of GST registration, ISO yyyy-mm-dd.
+     *
+     * @return the {@code dateOfRegistration} field, or {@code null} when absent
+     */
+    public String getDateOfRegistration() {
+        return string("dateOfRegistration");
+    }
+
+    /**
+     * Constitution of the business (legal form), for example Public Limited Company.
+     *
+     * @return the {@code constitutionOfBusiness} field, or {@code null} when absent
+     */
+    public String getConstitutionOfBusiness() {
+        return string("constitutionOfBusiness");
+    }
+
+    /**
+     * Taxpayer type, for example Regular or Composition.
+     *
+     * @return the {@code taxpayerType} field, or {@code null} when absent
+     */
+    public String getTaxpayerType() {
+        return string("taxpayerType");
+    }
+
+    /**
+     * GST registration status, for example Active.
+     *
+     * @return the {@code gstinStatus} field, or {@code null} when absent
+     */
+    public String getGstinStatus() {
+        return string("gstinStatus");
+    }
+
+    /**
+     * Date the registration record was last updated, ISO yyyy-mm-dd.
+     *
+     * @return the {@code lastUpdateDate} field, or {@code null} when absent
+     */
+    public String getLastUpdateDate() {
+        return string("lastUpdateDate");
+    }
+
+    /**
+     * Nature of business activities declared on the registration.
+     *
+     * @return the {@code natureOfBusinessActivities} entries (empty when absent)
+     */
+    public List<Map<String, Object>> getNatureOfBusinessActivities() {
+        return mapList("natureOfBusinessActivities");
+    }
+
+    /**
+     * Principal place of business as one address string.
+     *
+     * @return the {@code principalPlaceAddress} field, or {@code null} when absent
+     */
+    public String getPrincipalPlaceAddress() {
+        return string("principalPlaceAddress");
+    }
+
+    /**
+     * Principal place of business split into parts.
+     *
+     * @return the {@code principalPlaceSplitAddress} field, or {@code null} when absent
+     */
+    public GstinSplitAddress getPrincipalPlaceSplitAddress() {
+        return model("principalPlaceSplitAddress", GstinSplitAddress::new);
+    }
+
+    /**
+     * Additional places of business on the registration.
+     *
+     * @return the {@code additionalAddresses} entries (empty when absent)
+     */
+    public List<GstinAdditionalAddress> getAdditionalAddresses() {
+        return models("additionalAddresses", GstinAdditionalAddress::new);
+    }
+
+    /**
+     * Human-readable outcome, for example GSTIN Exists or GSTIN Doesn't Exist.
+     *
+     * @return the {@code message} field, or {@code null} when absent
+     */
+    public String getMessage() {
+        return string("message");
+    }
+
+    /**
+     * Same value as legalNameOfBusiness. Kept so existing integrations keep working.
      *
      * @return the {@code legalName} field, or {@code null} when absent
      */
@@ -67,7 +203,7 @@ public final class GstinVerification extends Model {
     }
 
     /**
-     * Trade name of the registrant.
+     * Same value as tradeNameOfBusiness. Kept so existing integrations keep working.
      *
      * @return the {@code tradeName} field, or {@code null} when absent
      */
@@ -76,7 +212,7 @@ public final class GstinVerification extends Model {
     }
 
     /**
-     * Registration status, e.g. Active.
+     * Same value as gstinStatus. Kept so existing integrations keep working.
      *
      * @return the {@code registrationStatus} field, or {@code null} when absent
      */
@@ -85,20 +221,11 @@ public final class GstinVerification extends Model {
     }
 
     /**
-     * Principal place of business.
+     * Same value as principalPlaceAddress. Kept so existing integrations keep working.
      *
      * @return the {@code principalPlaceOfBusiness} field, or {@code null} when absent
      */
     public String getPrincipalPlaceOfBusiness() {
         return string("principalPlaceOfBusiness");
-    }
-
-    /**
-     * Provider message.
-     *
-     * @return the {@code message} field, or {@code null} when absent
-     */
-    public String getMessage() {
-        return string("message");
     }
 }

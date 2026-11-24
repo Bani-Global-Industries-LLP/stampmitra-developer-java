@@ -2,10 +2,11 @@
 package in.stampmitra.sdk.models;
 
 import in.stampmitra.sdk.ResponseInfo;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Result of a Udyam verification.
+ * Result of a Udyam verification: the full registration record. Every field except referenceId, verificationId and found is optional.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -40,7 +41,16 @@ public final class UdyamVerification extends Model {
     }
 
     /**
-     * Whether the Udyam registration was found.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+     *
+     * @return the {@code verificationId} field, or {@code null} when absent
+     */
+    public String getVerificationId() {
+        return string("verificationId");
+    }
+
+    /**
+     * Whether an active Udyam registration was found. Always present.
      *
      * @return the {@code found} flag ({@code false} when the field is absent)
      */
@@ -49,7 +59,16 @@ public final class UdyamVerification extends Model {
     }
 
     /**
-     * Registration status.
+     * Outcome of the lookup: SUCCESS, UDYAM_NOT_FOUND or UDYAM_IS_CANCELLED.
+     *
+     * @return the {@code status} field, or {@code null} when absent
+     */
+    public String getStatus() {
+        return string("status");
+    }
+
+    /**
+     * Same value as status. Kept so existing integrations keep working.
      *
      * @return the {@code udyamStatus} field, or {@code null} when absent
      */
@@ -58,7 +77,16 @@ public final class UdyamVerification extends Model {
     }
 
     /**
-     * Enterprise name.
+     * The Udyam registration number that was looked up.
+     *
+     * @return the {@code udyamNumber} field, or {@code null} when absent
+     */
+    public String getUdyamNumber() {
+        return string("udyamNumber");
+    }
+
+    /**
+     * Registered enterprise name.
      *
      * @return the {@code enterpriseName} field, or {@code null} when absent
      */
@@ -67,16 +95,7 @@ public final class UdyamVerification extends Model {
     }
 
     /**
-     * Enterprise type.
-     *
-     * @return the {@code enterpriseType} field, or {@code null} when absent
-     */
-    public String getEnterpriseType() {
-        return string("enterpriseType");
-    }
-
-    /**
-     * Organization type, e.g. Micro.
+     * Legal form of the organisation, for example Proprietary.
      *
      * @return the {@code organizationType} field, or {@code null} when absent
      */
@@ -85,11 +104,137 @@ public final class UdyamVerification extends Model {
     }
 
     /**
-     * URL of the Udyam certificate.
+     * Major activity: Manufacturing, Services or Trading.
+     *
+     * @return the {@code majorActivity} field, or {@code null} when absent
+     */
+    public String getMajorActivity() {
+        return string("majorActivity");
+    }
+
+    /**
+     * Social category of the owner, for example General.
+     *
+     * @return the {@code socialCategory} field, or {@code null} when absent
+     */
+    public String getSocialCategory() {
+        return string("socialCategory");
+    }
+
+    /**
+     * Date of incorporation, ISO yyyy-mm-dd.
+     *
+     * @return the {@code dateOfIncorporation} field, or {@code null} when absent
+     */
+    public String getDateOfIncorporation() {
+        return string("dateOfIncorporation");
+    }
+
+    /**
+     * Date business commenced, ISO yyyy-mm-dd.
+     *
+     * @return the {@code dateOfCommencement} field, or {@code null} when absent
+     */
+    public String getDateOfCommencement() {
+        return string("dateOfCommencement");
+    }
+
+    /**
+     * Date the Udyam registration was issued, ISO yyyy-mm-dd.
+     *
+     * @return the {@code dateOfUdyamRegistration} field, or {@code null} when absent
+     */
+    public String getDateOfUdyamRegistration() {
+        return string("dateOfUdyamRegistration");
+    }
+
+    /**
+     * Current MSME classification: Micro, Small or Medium.
+     *
+     * @return the {@code enterpriseType} field, or {@code null} when absent
+     */
+    public String getEnterpriseType() {
+        return string("enterpriseType");
+    }
+
+    /**
+     * Financial year of the current classification, for example 2024-25.
+     *
+     * @return the {@code classificationYear} field, or {@code null} when absent
+     */
+    public String getClassificationYear() {
+        return string("classificationYear");
+    }
+
+    /**
+     * Date of the current classification, ISO yyyy-mm-dd.
+     *
+     * @return the {@code classificationDate} field, or {@code null} when absent
+     */
+    public String getClassificationDate() {
+        return string("classificationDate");
+    }
+
+    /**
+     * URL of the Udyam registration certificate (PDF).
      *
      * @return the {@code certificateUrl} field, or {@code null} when absent
      */
     public String getCertificateUrl() {
         return string("certificateUrl");
+    }
+
+    /**
+     * Year-by-year classification history, most recent first.
+     *
+     * @return the {@code classificationHistory} entries (empty when absent)
+     */
+    public List<UdyamClassificationHistoryEntry> getClassificationHistory() {
+        return models("classificationHistory", UdyamClassificationHistoryEntry::new);
+    }
+
+    /**
+     * Registered address of the enterprise, split into parts, with the registered contact details.
+     *
+     * @return the {@code splitAddress} field, or {@code null} when absent
+     */
+    public UdyamSplitAddress getSplitAddress() {
+        return model("splitAddress", UdyamSplitAddress::new);
+    }
+
+    /**
+     * Locations of the enterprise units.
+     *
+     * @return the {@code unitLocations} entries (empty when absent)
+     */
+    public List<UdyamUnitLocation> getUnitLocations() {
+        return models("unitLocations", UdyamUnitLocation::new);
+    }
+
+    /**
+     * NIC activity codes the enterprise is registered under.
+     *
+     * @return the {@code nicCodes} entries (empty when absent)
+     */
+    public List<UdyamNicCode> getNicCodes() {
+        return models("nicCodes", UdyamNicCode::new);
+    }
+
+    /**
+     * District Industries Centre.
+     *
+     * @return the {@code dic} field, or {@code null} when absent
+     */
+    public String getDic() {
+        return string("dic");
+    }
+
+    /**
+     * MSME Development Institute.
+     *
+     * @return the {@code msmeDi} field, or {@code null} when absent
+     */
+    public String getMsmeDi() {
+        return string("msmeDi");
     }
 }

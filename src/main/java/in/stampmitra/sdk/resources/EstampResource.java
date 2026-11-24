@@ -5,18 +5,31 @@ import in.stampmitra.sdk.RequestOptions;
 import in.stampmitra.sdk.internal.Args;
 import in.stampmitra.sdk.internal.Operation;
 import in.stampmitra.sdk.internal.RequestExecutor;
+import in.stampmitra.sdk.models.EstampDistrictList;
+import in.stampmitra.sdk.models.EstampRequirements;
+import in.stampmitra.sdk.models.EstampSroList;
+import in.stampmitra.sdk.models.EstampState;
+import in.stampmitra.sdk.models.EstampStatesAvailability;
+import in.stampmitra.sdk.models.EstampWallet;
 import in.stampmitra.sdk.models.GenericResponse;
 import in.stampmitra.sdk.requests.EstampDutyCalculateRequest;
 import in.stampmitra.sdk.requests.EstampPartiesRequest;
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * e-Stamp Paper reference data and helpers ({@code client.estamp()}). The API does not fix the e-Stamp field shapes, so results are {@link GenericResponse}.
+ * e-Stamp Paper ({@code client.estamp()}): reference data, duty, parties and the typed order and stamp sub-resources. The older reference-data routes return {@link GenericResponse} because the API does not fix their shapes; the routes added in contract 1.2.0 are typed.
  */
 public final class EstampResource {
 
+    private static final Operation GET_V1_ESTAMP_STATES_AVAILABILITY = Operation.get("/v1/estamp/states/availability");
+    private static final Operation GET_V1_ESTAMP_STATES_STATECODE = Operation.get("/v1/estamp/states/{stateCode}");
+    private static final Operation GET_V1_ESTAMP_STATES_STATECODE_REQUIREMENTS = Operation.get("/v1/estamp/states/{stateCode}/requirements");
+    private static final Operation GET_V1_ESTAMP_STATES_STATECODE_DISTRICTS = Operation.get("/v1/estamp/states/{stateCode}/districts");
+    private static final Operation GET_V1_ESTAMP_STATES_STATECODE_DISTRICTS_DISTRICTCODE_SROS = Operation.get("/v1/estamp/states/{stateCode}/districts/{districtCode}/sros");
+    private static final Operation GET_V1_ESTAMP_WALLET = Operation.get("/v1/estamp/wallet");
     private static final Operation GET_V1_ESTAMP_SCHEMA_SERVICECODE = Operation.get("/v1/estamp/schema/{serviceCode}");
     private static final Operation GET_V1_ESTAMP_STATES = Operation.get("/v1/estamp/states");
     private static final Operation GET_V1_ESTAMP_STATES_STATECODE_INSTRUMENTS = Operation.get("/v1/estamp/states/{stateCode}/instruments");
@@ -26,6 +39,8 @@ public final class EstampResource {
 
     private final RequestExecutor executor;
     private final boolean validateInput;
+    private final EstampOrdersResource orders;
+    private final EstampStampsResource stamps;
 
     /**
      * Creates the resource. Use the accessor on {@link in.stampmitra.sdk.StampMitra} instead.
@@ -36,6 +51,416 @@ public final class EstampResource {
     public EstampResource(RequestExecutor executor, boolean validateInput) {
         this.executor = executor;
         this.validateInput = validateInput;
+        this.orders = new EstampOrdersResource(executor, validateInput);
+        this.stamps = new EstampStampsResource(executor, validateInput);
+    }
+
+    /**
+     * e-Stamp orders: validate, create, list, get, cancel, export, stamps and PAN card upload.
+     *
+     * @return the orders resource
+     */
+    public EstampOrdersResource orders() {
+        return orders;
+    }
+
+    /**
+     * Single stamps: get, cancel, replace, PAN card link and certificate.
+     *
+     * @return the stamps resource
+     */
+    public EstampStampsResource stamps() {
+        return stamps;
+    }
+
+    /**
+     * Lists every state with its e-Stamp and traditional-stamp availability.
+     *
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampStatesAvailability getStatesAvailability() {
+        return getStatesAvailability((Boolean) null, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStatesAvailability()}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampStatesAvailability> getStatesAvailabilityAsync() {
+        return executor.async(() -> getStatesAvailability());
+    }
+
+    /**
+     * Lists every state with its e-Stamp and traditional-stamp availability.
+     *
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampStatesAvailability getStatesAvailability(RequestOptions options) {
+        return getStatesAvailability((Boolean) null, options);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStatesAvailability(RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampStatesAvailability> getStatesAvailabilityAsync(RequestOptions options) {
+        return executor.async(() -> getStatesAvailability(options));
+    }
+
+    /**
+     * Lists every state with its e-Stamp and traditional-stamp availability.
+     *
+     * @param active {@code true} to return only the states accepting orders right now, or {@code null} for all
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampStatesAvailability getStatesAvailability(Boolean active) {
+        return getStatesAvailability(active, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStatesAvailability(Boolean)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param active {@code true} to return only the states accepting orders right now, or {@code null} for all
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampStatesAvailability> getStatesAvailabilityAsync(Boolean active) {
+        return executor.async(() -> getStatesAvailability(active));
+    }
+
+    /**
+     * Lists every state with its e-Stamp and traditional-stamp availability.
+     *
+     * @param active {@code true} to return only the states accepting orders right now, or {@code null} for all
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampStatesAvailability getStatesAvailability(Boolean active, RequestOptions options) {
+        Map<String, String> query = new LinkedHashMap<>();
+        if (active != null) {
+            query.put("active", String.valueOf(active));
+        }
+        return executor.execute(GET_V1_ESTAMP_STATES_AVAILABILITY, GET_V1_ESTAMP_STATES_AVAILABILITY.render(), query, null, options, false, EstampStatesAvailability::new);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStatesAvailability(Boolean, RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param active {@code true} to return only the states accepting orders right now, or {@code null} for all
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampStatesAvailability> getStatesAvailabilityAsync(Boolean active, RequestOptions options) {
+        return executor.async(() -> getStatesAvailability(active, options));
+    }
+
+    /**
+     * Fetches one state with its requirement flags.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampState getState(String stateCode) {
+        return getState(stateCode, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getState(String)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampState> getStateAsync(String stateCode) {
+        return executor.async(() -> getState(stateCode));
+    }
+
+    /**
+     * Fetches one state with its requirement flags.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampState getState(String stateCode, RequestOptions options) {
+        return executor.execute(GET_V1_ESTAMP_STATES_STATECODE, GET_V1_ESTAMP_STATES_STATECODE.render(stateCode), null, null, options, false, EstampState::new);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getState(String, RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampState> getStateAsync(String stateCode, RequestOptions options) {
+        return executor.async(() -> getState(stateCode, options));
+    }
+
+    /**
+     * Fetches what a state requires for an article and denomination; the result includes a ready-to-edit {@code exampleBody}.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampRequirements getStateRequirements(String stateCode) {
+        return getStateRequirements(stateCode, (String) null, (BigDecimal) null, (String) null, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStateRequirements(String)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampRequirements> getStateRequirementsAsync(String stateCode) {
+        return executor.async(() -> getStateRequirements(stateCode));
+    }
+
+    /**
+     * Fetches what a state requires for an article and denomination; the result includes a ready-to-edit {@code exampleBody}.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampRequirements getStateRequirements(String stateCode, RequestOptions options) {
+        return getStateRequirements(stateCode, (String) null, (BigDecimal) null, (String) null, options);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStateRequirements(String, RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampRequirements> getStateRequirementsAsync(String stateCode, RequestOptions options) {
+        return executor.async(() -> getStateRequirements(stateCode, options));
+    }
+
+    /**
+     * Fetches what a state requires for an article and denomination; the result includes a ready-to-edit {@code exampleBody}.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param articleCode the article code from the instruments route, or {@code null}
+     * @param denomination face value in rupees, or {@code null}
+     * @param category {@code e_stamp} or {@code traditional_stamp}, or {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampRequirements getStateRequirements(String stateCode, String articleCode, BigDecimal denomination, String category) {
+        return getStateRequirements(stateCode, articleCode, denomination, category, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStateRequirements(String, String, BigDecimal, String)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param articleCode the article code from the instruments route, or {@code null}
+     * @param denomination face value in rupees, or {@code null}
+     * @param category {@code e_stamp} or {@code traditional_stamp}, or {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampRequirements> getStateRequirementsAsync(String stateCode, String articleCode, BigDecimal denomination, String category) {
+        return executor.async(() -> getStateRequirements(stateCode, articleCode, denomination, category));
+    }
+
+    /**
+     * Fetches what a state requires for an article and denomination; the result includes a ready-to-edit {@code exampleBody}.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param articleCode the article code from the instruments route, or {@code null}
+     * @param denomination face value in rupees, or {@code null}
+     * @param category {@code e_stamp} or {@code traditional_stamp}, or {@code null}
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampRequirements getStateRequirements(String stateCode, String articleCode, BigDecimal denomination, String category, RequestOptions options) {
+        Map<String, String> query = new LinkedHashMap<>();
+        if (articleCode != null) {
+            query.put("articleCode", String.valueOf(articleCode));
+        }
+        if (denomination != null) {
+            query.put("denomination", denomination.toPlainString());
+        }
+        if (category != null) {
+            query.put("category", String.valueOf(category));
+        }
+        return executor.execute(GET_V1_ESTAMP_STATES_STATECODE_REQUIREMENTS, GET_V1_ESTAMP_STATES_STATECODE_REQUIREMENTS.render(stateCode), query, null, options, false, EstampRequirements::new);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getStateRequirements(String, String, BigDecimal, String, RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code, for example {@code MH}
+     * @param articleCode the article code from the instruments route, or {@code null}
+     * @param denomination face value in rupees, or {@code null}
+     * @param category {@code e_stamp} or {@code traditional_stamp}, or {@code null}
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampRequirements> getStateRequirementsAsync(String stateCode, String articleCode, BigDecimal denomination, String category, RequestOptions options) {
+        return executor.async(() -> getStateRequirements(stateCode, articleCode, denomination, category, options));
+    }
+
+    /**
+     * Lists the districts of a state.
+     *
+     * @param stateCode the state code
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampDistrictList listDistricts(String stateCode) {
+        return listDistricts(stateCode, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #listDistricts(String)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampDistrictList> listDistrictsAsync(String stateCode) {
+        return executor.async(() -> listDistricts(stateCode));
+    }
+
+    /**
+     * Lists the districts of a state.
+     *
+     * @param stateCode the state code
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampDistrictList listDistricts(String stateCode, RequestOptions options) {
+        return executor.execute(GET_V1_ESTAMP_STATES_STATECODE_DISTRICTS, GET_V1_ESTAMP_STATES_STATECODE_DISTRICTS.render(stateCode), null, null, options, false, EstampDistrictList::new);
+    }
+
+    /**
+     * Asynchronous variant of {@link #listDistricts(String, RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampDistrictList> listDistrictsAsync(String stateCode, RequestOptions options) {
+        return executor.async(() -> listDistricts(stateCode, options));
+    }
+
+    /**
+     * Lists the sub-registrar offices of a district.
+     *
+     * @param stateCode the state code
+     * @param districtCode the district code
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampSroList listSros(String stateCode, String districtCode) {
+        return listSros(stateCode, districtCode, (RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #listSros(String, String)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code
+     * @param districtCode the district code
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampSroList> listSrosAsync(String stateCode, String districtCode) {
+        return executor.async(() -> listSros(stateCode, districtCode));
+    }
+
+    /**
+     * Lists the sub-registrar offices of a district.
+     *
+     * @param stateCode the state code
+     * @param districtCode the district code
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampSroList listSros(String stateCode, String districtCode, RequestOptions options) {
+        return executor.execute(GET_V1_ESTAMP_STATES_STATECODE_DISTRICTS_DISTRICTCODE_SROS, GET_V1_ESTAMP_STATES_STATECODE_DISTRICTS_DISTRICTCODE_SROS.render(stateCode, districtCode), null, null, options, false, EstampSroList::new);
+    }
+
+    /**
+     * Asynchronous variant of {@link #listSros(String, String, RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param stateCode the state code
+     * @param districtCode the district code
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampSroList> listSrosAsync(String stateCode, String districtCode, RequestOptions options) {
+        return executor.async(() -> listSros(stateCode, districtCode, options));
+    }
+
+    /**
+     * Fetches both fulfilment wallets (Stamp Duty and Service Fee) in one call. Needs both wallet read scopes.
+     *
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampWallet getWallet() {
+        return getWallet((RequestOptions) null);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getWallet()}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampWallet> getWalletAsync() {
+        return executor.async(() -> getWallet());
+    }
+
+    /**
+     * Fetches both fulfilment wallets (Stamp Duty and Service Fee) in one call. Needs both wallet read scopes.
+     *
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return the result
+     * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
+     */
+    public EstampWallet getWallet(RequestOptions options) {
+        return executor.execute(GET_V1_ESTAMP_WALLET, GET_V1_ESTAMP_WALLET.render(), null, null, options, false, EstampWallet::new);
+    }
+
+    /**
+     * Asynchronous variant of {@link #getWallet(RequestOptions)}. Failures, including validation errors, complete the future exceptionally;
+     * {@code cancel(true)} interrupts the call.
+     *
+     * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
+     * @return a future of the result
+     */
+    public CompletableFuture<EstampWallet> getWalletAsync(RequestOptions options) {
+        return executor.async(() -> getWallet(options));
     }
 
     /**

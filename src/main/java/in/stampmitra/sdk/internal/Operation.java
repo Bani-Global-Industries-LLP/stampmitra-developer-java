@@ -4,15 +4,25 @@ import in.stampmitra.sdk.errors.ValidationException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-/** One API operation: an HTTP method plus a path template such as {@code /v1/orders/{id}}. Internal. */
+/**
+ * One API operation: an HTTP method plus a path template such as {@code /v1/orders/{id}}, and its retry class. Internal.
+ *
+ * <p>Retry classes follow the spec markers: a {@code GET} is always retry-safe; a {@code POST} is retried only with an
+ * {@code Idempotency-Key}, unless it is {@linkplain #retrySafe() retry-safe} on its own (a dry run) or
+ * {@linkplain #neverRetry() never retried} (it spends money or changes state and has no idempotency key).
+ */
 public final class Operation {
 
     private final String method;
     private final String template;
+    private final boolean neverRetry;
+    private final boolean retrySafe;
 
-    private Operation(String method, String template) {
+    private Operation(String method, String template, boolean neverRetry, boolean retrySafe) {
         this.method = method;
         this.template = template;
+        this.neverRetry = neverRetry;
+        this.retrySafe = retrySafe;
     }
 
     /**
@@ -22,7 +32,7 @@ public final class Operation {
      * @return the operation
      */
     public static Operation get(String template) {
-        return new Operation("GET", template);
+        return new Operation("GET", template, false, false);
     }
 
     /**
@@ -32,7 +42,45 @@ public final class Operation {
      * @return the operation
      */
     public static Operation post(String template) {
-        return new Operation("POST", template);
+        return new Operation("POST", template, false, false);
+    }
+
+    /**
+     * Marks the operation as never auto-retried: whatever the failure, and even when the caller passes an
+     * {@code Idempotency-Key}, exactly one attempt is made (spec marker {@code x-retry-safe: false}).
+     *
+     * @return a copy with that retry class
+     */
+    public Operation neverRetry() {
+        return new Operation(method, template, true, false);
+    }
+
+    /**
+     * Marks a {@code POST} as retry-safe without an {@code Idempotency-Key}: a dry run that creates nothing and is not
+     * billed (spec marker {@code x-retry-safe: true} on an operation without an {@code Idempotency-Key} parameter).
+     *
+     * @return a copy with that retry class
+     */
+    public Operation retrySafe() {
+        return new Operation(method, template, false, true);
+    }
+
+    /**
+     * Whether the operation is never auto-retried.
+     *
+     * @return {@code true} for operations marked {@link #neverRetry()}
+     */
+    public boolean isNeverRetry() {
+        return neverRetry;
+    }
+
+    /**
+     * Whether a {@code POST} may be retried without an {@code Idempotency-Key}.
+     *
+     * @return {@code true} for operations marked {@link #retrySafe()}
+     */
+    public boolean isRetrySafe() {
+        return retrySafe;
     }
 
     /**

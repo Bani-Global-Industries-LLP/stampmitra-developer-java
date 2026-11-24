@@ -1,6 +1,8 @@
 package in.stampmitra.sdk.errors;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +74,7 @@ public class StampMitraException extends RuntimeException {
     }
 
     /**
-     * Machine readable error code from the response, for example {@code VALIDATION_ERROR}.
+     * Machine readable error code from the response, for example {@code VALIDATION_ERROR} or {@code IDEMPOTENCY_IN_PROGRESS}.
      *
      * @return the code, or {@code null}
      */
@@ -105,6 +107,69 @@ public class StampMitraException extends RuntimeException {
      */
     public Object getBody() {
         return body;
+    }
+
+    /**
+     * The {@code error.details} object of the response, which the API sets on some errors only.
+     *
+     * @return an unmodifiable map, empty when absent
+     */
+    public Map<String, Object> getDetails() {
+        if (body instanceof Map) {
+            Object err = ((Map<?, ?>) body).get("error");
+            if (err instanceof Map) {
+                Object details = ((Map<?, ?>) err).get("details");
+                if (details instanceof Map) {
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    for (Map.Entry<?, ?> e : ((Map<?, ?>) details).entrySet()) {
+                        out.put(String.valueOf(e.getKey()), e.getValue());
+                    }
+                    return Collections.unmodifiableMap(out);
+                }
+            }
+        }
+        return Collections.emptyMap();
+    }
+
+    /**
+     * Per-field findings of a rejected e-Stamp order body ({@code error.details.errors[]}), each with {@code field},
+     * {@code code}, {@code message} and {@code index}.
+     *
+     * @return an unmodifiable list, empty when the response carried none
+     */
+    public List<FieldIssue> getFieldErrors() {
+        List<FieldIssue> out = new ArrayList<>();
+        Object errors = getDetails().get("errors");
+        if (errors instanceof List) {
+            for (Object o : (List<?>) errors) {
+                if (o instanceof Map) {
+                    Map<?, ?> m = (Map<?, ?>) o;
+                    Object index = m.get("index");
+                    out.add(new FieldIssue(text(m.get("field")), text(m.get("code")), text(m.get("message")),
+                            index instanceof Number ? Integer.valueOf(((Number) index).intValue()) : null));
+                }
+            }
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    /**
+     * The wallet that is short on a 402 from an e-Stamp order ({@code error.details.wallet}).
+     *
+     * @return the wallet, or {@code null} when absent or not one of the documented values
+     */
+    public WalletType getWallet() {
+        Object w = getDetails().get("wallet");
+        for (WalletType t : WalletType.values()) {
+            if (t.name().equals(w)) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    private static String text(Object o) {
+        return o == null ? null : String.valueOf(o);
     }
 
     /**

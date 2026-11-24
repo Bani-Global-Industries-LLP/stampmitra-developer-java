@@ -11,7 +11,7 @@ Official Java client for the [StampMitra Developer API](https://developer.stampm
 Indian identity verification (PAN, GSTIN, vehicle RC, Voter ID, driving licence, passport, CIN, Udyam, bank account)
 and e-Stamp Paper. OpenAPI spec: <https://developer.stampmitra.in/openapi.json>.
 
-> **Status: pre-1.0 (0.1.0).** The API surface may change in minor releases. Pin your version.
+> **Status: pre-1.0 (0.2.0).** The API surface may change in minor releases. Pin your version.
 
 SDK guide: <https://developer.stampmitra.in/sdks/java> | API docs: <https://developer.stampmitra.in/docs>
 
@@ -21,13 +21,13 @@ SDK guide: <https://developer.stampmitra.in/sdks/java> | API docs: <https://deve
 <dependency>
   <groupId>in.stampmitra</groupId>
   <artifactId>stampmitra-java</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
 ```kotlin
 // Gradle
-implementation("in.stampmitra:stampmitra-java:0.1.0")
+implementation("in.stampmitra:stampmitra-java:0.2.0")
 ```
 
 Requires **Java 11 or newer** (built with `--release 11`; the test suite runs on JDK 11, 17 and 21). Runtime

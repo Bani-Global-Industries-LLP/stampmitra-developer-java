@@ -2,10 +2,11 @@
 package in.stampmitra.sdk.models;
 
 import in.stampmitra.sdk.ResponseInfo;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Result of a driving licence verification.
+ * Result of a driving licence verification: the full licence record. Every field except referenceId, verificationId and valid is optional.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -40,7 +41,16 @@ public final class DrivingLicenseVerification extends Model {
     }
 
     /**
-     * Whether the licence is valid.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+     *
+     * @return the {@code verificationId} field, or {@code null} when absent
+     */
+    public String getVerificationId() {
+        return string("verificationId");
+    }
+
+    /**
+     * Whether the driving licence is valid. Always present.
      *
      * @return the {@code valid} flag ({@code false} when the field is absent)
      */
@@ -49,25 +59,16 @@ public final class DrivingLicenseVerification extends Model {
     }
 
     /**
-     * Licence holder's name.
+     * The driving licence number that was looked up.
      *
-     * @return the {@code name} field, or {@code null} when absent
+     * @return the {@code dlNumber} field, or {@code null} when absent
      */
-    public String getName() {
-        return string("name");
+    public String getDlNumber() {
+        return string("dlNumber");
     }
 
     /**
-     * Father's or husband's name.
-     *
-     * @return the {@code fatherOrHusbandName} field, or {@code null} when absent
-     */
-    public String getFatherOrHusbandName() {
-        return string("fatherOrHusbandName");
-    }
-
-    /**
-     * Date of birth.
+     * The licence holder's date of birth, ISO yyyy-mm-dd.
      *
      * @return the {@code dob} field, or {@code null} when absent
      */
@@ -76,7 +77,43 @@ public final class DrivingLicenseVerification extends Model {
     }
 
     /**
-     * Address.
+     * Outcome of the lookup: VALID or INVALID.
+     *
+     * @return the {@code status} field, or {@code null} when absent
+     */
+    public String getStatus() {
+        return string("status");
+    }
+
+    /**
+     * Same value as status. Kept so existing integrations keep working.
+     *
+     * @return the {@code dlStatus} field, or {@code null} when absent
+     */
+    public String getDlStatus() {
+        return string("dlStatus");
+    }
+
+    /**
+     * The licence holder's registered name. Same as detailsOfDrivingLicence.name. Kept for existing integrations.
+     *
+     * @return the {@code name} field, or {@code null} when absent
+     */
+    public String getName() {
+        return string("name");
+    }
+
+    /**
+     * Name of the holder's father or husband. Same as detailsOfDrivingLicence.fatherOrHusbandName. Kept for existing integrations.
+     *
+     * @return the {@code fatherOrHusbandName} field, or {@code null} when absent
+     */
+    public String getFatherOrHusbandName() {
+        return string("fatherOrHusbandName");
+    }
+
+    /**
+     * The registered address as one string. Same as detailsOfDrivingLicence.address. Kept for existing integrations.
      *
      * @return the {@code address} field, or {@code null} when absent
      */
@@ -85,7 +122,7 @@ public final class DrivingLicenseVerification extends Model {
     }
 
     /**
-     * Licence valid-until date.
+     * End of validity of the non-transport classes, a date string exactly as supplied (dd/mm/yyyy in the example). Same as dlValidity.nonTransport.to. Kept for existing integrations.
      *
      * @return the {@code validUpto} field, or {@code null} when absent
      */
@@ -94,11 +131,29 @@ public final class DrivingLicenseVerification extends Model {
     }
 
     /**
-     * Licence status, e.g. ACTIVE.
+     * Transport badge details and the classes of vehicle covered. null when the record carries no badge block.
      *
-     * @return the {@code dlStatus} field, or {@code null} when absent
+     * @return the {@code badgeDetails} entries (empty when absent)
      */
-    public String getDlStatus() {
-        return string("dlStatus");
+    public List<DrivingLicenseBadgeDetail> getBadgeDetails() {
+        return models("badgeDetails", DrivingLicenseBadgeDetail::new);
+    }
+
+    /**
+     * Validity periods of the licence by class: non-transport, transport, hazardous goods and hill area.
+     *
+     * @return the {@code dlValidity} field, or {@code null} when absent
+     */
+    public DrivingLicenseValidity getDlValidity() {
+        return model("dlValidity", DrivingLicenseValidity::new);
+    }
+
+    /**
+     * Details held on the licence record: issue date, holder names, addresses, photograph link and class-of-vehicle details.
+     *
+     * @return the {@code detailsOfDrivingLicence} field, or {@code null} when absent
+     */
+    public DrivingLicenseDetails getDetailsOfDrivingLicence() {
+        return model("detailsOfDrivingLicence", DrivingLicenseDetails::new);
     }
 }

@@ -67,8 +67,8 @@ class SpecCoverageTest {
     }
 
     @Test
-    void thereAreThirtyOneOperations() throws IOException {
-        assertThat(specOperations()).hasSize(31);
-        assertThat(sdkOperations()).hasSize(31);
+    void thereAreSixtyTwoOperations() throws IOException {
+        assertThat(specOperations()).hasSize(62);
+        assertThat(sdkOperations()).hasSize(62);
     }
 }
