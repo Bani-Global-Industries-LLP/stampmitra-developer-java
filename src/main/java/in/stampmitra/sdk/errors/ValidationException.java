@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * HTTP 400, or a client-side validation failure raised before any request was sent (no network call, nothing billed).
+ * HTTP 400 or 422 (for example {@code IDEMPOTENCY_KEY_REUSED}), or a client-side validation failure raised before any request was sent (no network call, nothing billed).
  * {@link #getField()} names the offending input when known.
  */
 public class ValidationException extends StampMitraException {

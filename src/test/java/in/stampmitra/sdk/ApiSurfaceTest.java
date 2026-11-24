@@ -8,7 +8,12 @@ import in.stampmitra.sdk.models.Model;
 import in.stampmitra.sdk.requests.CreateOrderRequest;
 import in.stampmitra.sdk.requests.CreatePaymentIntentRequest;
 import in.stampmitra.sdk.requests.EstampDutyCalculateRequest;
+import in.stampmitra.sdk.requests.DocumentUpload;
+import in.stampmitra.sdk.requests.EstampOrderRequest;
+import in.stampmitra.sdk.requests.EstampPanCardRequest;
 import in.stampmitra.sdk.requests.EstampPartiesRequest;
+import in.stampmitra.sdk.requests.EstampStampLine;
+import in.stampmitra.sdk.requests.WalletTopupRequest;
 import in.stampmitra.sdk.resources.LogsParams;
 import in.stampmitra.sdk.support.FakeTransport;
 import in.stampmitra.sdk.support.TestClients;
@@ -17,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -80,6 +86,14 @@ class ApiSurfaceTest {
         return m;
     }
 
+    private static EstampStampLine line() {
+        return EstampStampLine.builder().state("MH").articleCode("ART1").denomination(1000).firstParty("Jane Doe").build();
+    }
+
+    private static boolean isAccessor(Method m) {
+        return m.getParameterCount() == 0 && m.getReturnType().getSimpleName().endsWith("Resource");
+    }
+
     private static Object sample(Parameter p, String methodName) {
         Class<?> t = p.getType();
         if (t == String.class) {
@@ -88,10 +102,36 @@ class ApiSurfaceTest {
         if (t == Integer.class) {
             return 5;
         }
+        if (t == Boolean.class) {
+            return Boolean.TRUE;
+        }
+        if (t == BigDecimal.class) {
+            return new BigDecimal("500");
+        }
+        if (t == EstampOrderRequest.class) {
+            return EstampOrderRequest.builder().addStamp(line()).build();
+        }
+        if (t == EstampPanCardRequest.class) {
+            return EstampPanCardRequest.builder().panCardImage("https://cdn.example.com/pan.jpg").build();
+        }
+        if (t == WalletTopupRequest.class) {
+            return WalletTopupRequest.builder().baseAmount(1000).build();
+        }
+        if (t == DocumentUpload.class) {
+            return DocumentUpload.of("pan.pdf", new byte[] {'%', 'P', 'D', 'F'});
+        }
         if (t == RequestOptions.class) {
             return null;
         }
         if (t == Map.class) {
+            String owner = p.getDeclaringExecutable().getDeclaringClass().getSimpleName();
+            if (owner.equals("EstampOrdersResource")) {
+                return EstampOrderRequest.builder().addStamp(line()).build().toMap();
+            } else if (owner.equals("EstampStampsResource")) {
+                return EstampPanCardRequest.builder().panCardImage("https://cdn.example.com/pan.jpg").build().toMap();
+            } else if (owner.endsWith("WalletResource")) {
+                return WalletTopupRequest.builder().baseAmount(1000).build().toMap();
+            }
             return methodName.startsWith("calculateDuty") ? duty() : methodName.startsWith("create")
                     && p.getDeclaringExecutable().getDeclaringClass().getSimpleName().startsWith("Payment")
                     ? paymentBody() : methodName.startsWith("create") ? orderBody() : Collections.<String, Object>emptyMap();
@@ -117,13 +157,14 @@ class ApiSurfaceTest {
     @Test
     void everyResourceOverloadWorksSyncAndAsync() throws Exception {
         StampMitra c = TestClients.client(new FakeTransport().thenOk("{\"items\":[],\"nextCursor\":null}"));
-        Object[] resources = {c.verify(), c.services(), c.estamp(), c.orders(), c.payments().intents(), c.usage(),
-                c.webhooks().events(), c.logs()};
+        Object[] resources = {c.verify(), c.services(), c.estamp(), c.estamp().orders(), c.estamp().stamps(), c.orders(),
+                c.payments().intents(), c.usage(), c.webhooks().events(), c.logs(), c.wallets().stampDuty(),
+                c.wallets().serviceFee(), c.account()};
         int invoked = 0;
         for (Object r : resources) {
             for (Method m : r.getClass().getDeclaredMethods()) {
                 if (!Modifier.isPublic(m.getModifiers()) || m.getName().startsWith("lambda$")
-                        || m.getName().equals("iterate") || m.getName().equals("stream") || m.getName().equals("pages")) {
+                        || isAccessor(m) || m.getName().equals("iterate") || m.getName().equals("stream") || m.getName().equals("pages")) {
                     continue;
                 }
                 Object[] args = new Object[m.getParameterCount()];
@@ -149,13 +190,14 @@ class ApiSurfaceTest {
     @Test
     void everySyncMethodHasAnAsyncTwinAndViceVersa() {
         StampMitra c = TestClients.client(new FakeTransport().thenOk("{}"));
-        Object[] resources = {c.verify(), c.services(), c.estamp(), c.orders(), c.payments().intents(), c.usage(),
-                c.webhooks().events()};
+        Object[] resources = {c.verify(), c.services(), c.estamp(), c.estamp().orders(), c.estamp().stamps(), c.orders(),
+                c.payments().intents(), c.usage(), c.webhooks().events(), c.wallets().stampDuty(),
+                c.wallets().serviceFee(), c.account()};
         for (Object r : resources) {
             TreeSet<String> sync = new TreeSet<>();
             TreeSet<String> async = new TreeSet<>();
             for (Method m : r.getClass().getDeclaredMethods()) {
-                if (Modifier.isPublic(m.getModifiers()) && !m.getName().startsWith("lambda$")) {
+                if (Modifier.isPublic(m.getModifiers()) && !m.getName().startsWith("lambda$") && !isAccessor(m)) {
                     String sig = Arrays.toString(m.getParameterTypes());
                     if (m.getName().endsWith("Async")) {
                         async.add(m.getName().substring(0, m.getName().length() - 5) + sig);
@@ -172,6 +214,13 @@ class ApiSurfaceTest {
         if (prop.has("$ref")) {
             String ref = prop.get("$ref").asText().substring(prop.get("$ref").asText().lastIndexOf('/') + 1);
             return synthObject(schemas, ref, models);
+        }
+        if (!prop.has("type") && (prop.has("oneOf") || prop.has("anyOf"))) {
+            for (JsonNode alt : prop.has("oneOf") ? prop.get("oneOf") : prop.get("anyOf")) {
+                if (!"null".equals(alt.path("type").asText())) {
+                    return synth(schemas, alt, models);
+                }
+            }
         }
         JsonNode typeNode = prop.get("type");
         String type = typeNode == null ? "any" : typeNode.isArray() ? typeNode.get(0).asText() : typeNode.asText();
@@ -216,7 +265,56 @@ class ApiSurfaceTest {
                 {"OrderStatusResponse", "OrderStatusResponse"}, {"OrderPaymentResponse", "OrderPaymentResponse"},
                 {"OrderDocumentsResponse", "OrderDocumentsResponse"}, {"DocumentDownloadUrl", "DocumentDownloadUrl"},
                 {"PaymentIntent", "PaymentIntent"}, {"UsageSummary", "UsageSummary"}, {"LogEntry", "LogEntry"},
-                {"LogsPage", "LogPage"}};
+                {"LogsPage", "LogPage"},
+                {"GstinSplitAddress", "GstinSplitAddress"},
+                {"GstinAdditionalAddress", "GstinAdditionalAddress"},
+                {"VoterIdSplitAddress", "VoterIdSplitAddress"},
+                {"DrivingLicenseSplitAddress", "DrivingLicenseSplitAddress"},
+                {"DrivingLicenseAddressEntry", "DrivingLicenseAddressEntry"},
+                {"DrivingLicenseBadgeDetail", "DrivingLicenseBadgeDetail"},
+                {"DrivingLicenseValidityPeriod", "DrivingLicenseValidityPeriod"},
+                {"DrivingLicenseValidity", "DrivingLicenseValidity"},
+                {"DrivingLicenseDetails", "DrivingLicenseDetails"},
+                {"CinDirectorDetail", "CinDirectorDetail"},
+                {"UdyamClassificationHistoryEntry", "UdyamClassificationHistoryEntry"},
+                {"UdyamSplitAddress", "UdyamSplitAddress"},
+                {"UdyamUnitLocation", "UdyamUnitLocation"},
+                {"UdyamNicCode", "UdyamNicCode"},
+                {"AccountBalance", "AccountBalance"},
+                {"AccountUsage", "AccountUsage"},
+                {"EstampStateAvailability", "EstampStateAvailability"},
+                {"EstampStatesAvailability", "EstampStatesAvailability"},
+                {"EstampState", "EstampState"},
+                {"EstampDistrict", "EstampDistrict"},
+                {"EstampSro", "EstampSro"},
+                {"EstampRequirements", "EstampRequirements"},
+                {"EstampOrderQuote", "EstampOrderQuote"},
+                {"EstampValidationIssue", "EstampValidationIssue"},
+                {"EstampDocumentRequirement", "EstampDocumentRequirement"},
+                {"EstampOrderCounts", "EstampOrderCounts"},
+                {"EstampValidateResult", "EstampValidateResult"},
+                {"EstampOrderStampRef", "EstampOrderStampRef"},
+                {"EstampOrderAdvisory", "EstampOrderAdvisory"},
+                {"EstampOrder", "EstampOrder"},
+                {"EstampOrderList", "EstampOrderList"},
+                {"EstampOrderExport", "EstampOrderExport"},
+                {"EstampPanCardStatus", "EstampPanCardStatus"},
+                {"EstampStamp", "EstampStamp"},
+                {"EstampStampList", "EstampStampList"},
+                {"EstampPanCardResult", "EstampPanCardResult"},
+                {"EstampDocument", "EstampDocument"},
+                {"EstampCertificate", "EstampCertificate"},
+                {"EstampWalletPart", "EstampWalletPart"},
+                {"EstampWallet", "EstampWallet"},
+                {"WalletBalance", "WalletBalance"},
+                {"StampDutyWalletTopup", "StampDutyWalletTopup"},
+                {"StampDutyWalletInvoice", "StampDutyWalletInvoice"},
+                {"StampDutyWalletInvoicesPage", "StampDutyWalletInvoicesPage"},
+                {"ServiceFeeWalletTopup", "ServiceFeeWalletTopup"},
+                {"WalletTransaction", "WalletTransaction"},
+                {"WalletTransactionsPage", "WalletTransactionsPage"},
+                {"WalletInvoice", "WalletInvoice"},
+                {"WalletInvoicesPage", "WalletInvoicesPage"}};
         int checked = 0;
         List<String> problems = new ArrayList<>();
         for (String[] m : mapping) {
@@ -251,7 +349,7 @@ class ApiSurfaceTest {
             }
         }
         assertThat(problems).isEmpty();
-        assertThat(checked).isGreaterThan(150);
+        assertThat(checked).isGreaterThan(400);
     }
 
     @Test
@@ -259,7 +357,7 @@ class ApiSurfaceTest {
         JsonNode schemas = Json.mapper().readTree(Files.readAllBytes(Paths.get(System.getProperty("project.basedir", "."),
                 "spec/openapi.json"))).get("components").get("schemas");
         for (String name : new String[] {"CreateOrderRequest", "CreatePaymentIntentRequest", "EstampDutyCalculateRequest",
-                "EstampPartiesRequest"}) {
+                "EstampPartiesRequest", "EstampPanCardRequest", "WalletTopupRequest"}) {
             Class<?> builderClass = null;
             try {
                 builderClass = Class.forName("in.stampmitra.sdk.requests." + name + "$Builder");

@@ -5,7 +5,7 @@ import in.stampmitra.sdk.ResponseInfo;
 import java.util.Map;
 
 /**
- * Result of a Voter ID verification.
+ * Result of a Voter ID verification: the full voter record. Every field except referenceId, verificationId and valid is optional.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -40,7 +40,16 @@ public final class VoterIdVerification extends Model {
     }
 
     /**
-     * Whether the Voter ID is valid.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+     *
+     * @return the {@code verificationId} field, or {@code null} when absent
+     */
+    public String getVerificationId() {
+        return string("verificationId");
+    }
+
+    /**
+     * Whether the voter ID is valid. Always present.
      *
      * @return the {@code valid} flag ({@code false} when the field is absent)
      */
@@ -49,7 +58,25 @@ public final class VoterIdVerification extends Model {
     }
 
     /**
-     * Registered name.
+     * Outcome of the lookup: VALID or INVALID.
+     *
+     * @return the {@code status} field, or {@code null} when absent
+     */
+    public String getStatus() {
+        return string("status");
+    }
+
+    /**
+     * The voter ID (EPIC) number that was looked up.
+     *
+     * @return the {@code epicNumber} field, or {@code null} when absent
+     */
+    public String getEpicNumber() {
+        return string("epicNumber");
+    }
+
+    /**
+     * The voter's registered name, when the voter ID is valid.
      *
      * @return the {@code name} field, or {@code null} when absent
      */
@@ -58,7 +85,61 @@ public final class VoterIdVerification extends Model {
     }
 
     /**
-     * Date of birth.
+     * The voter's name in the regional language of the roll.
+     *
+     * @return the {@code nameInRegionalLang} field, or {@code null} when absent
+     */
+    public String getNameInRegionalLang() {
+        return string("nameInRegionalLang");
+    }
+
+    /**
+     * The voter's age in years, as a string, when available.
+     *
+     * @return the {@code age} field, or {@code null} when absent
+     */
+    public String getAge() {
+        return string("age");
+    }
+
+    /**
+     * Type of the relation named on the roll (for example FTHR for father, HUSB for husband).
+     *
+     * @return the {@code relationType} field, or {@code null} when absent
+     */
+    public String getRelationType() {
+        return string("relationType");
+    }
+
+    /**
+     * Name of the relative named on the roll.
+     *
+     * @return the {@code relationName} field, or {@code null} when absent
+     */
+    public String getRelationName() {
+        return string("relationName");
+    }
+
+    /**
+     * The relative's name in the regional language of the roll.
+     *
+     * @return the {@code relationNameInRegionalLang} field, or {@code null} when absent
+     */
+    public String getRelationNameInRegionalLang() {
+        return string("relationNameInRegionalLang");
+    }
+
+    /**
+     * The voter's father's name, when the roll gives it.
+     *
+     * @return the {@code fatherName} field, or {@code null} when absent
+     */
+    public String getFatherName() {
+        return string("fatherName");
+    }
+
+    /**
+     * The voter's date of birth, ISO yyyy-mm-dd, when the roll has one.
      *
      * @return the {@code dob} field, or {@code null} when absent
      */
@@ -67,7 +148,7 @@ public final class VoterIdVerification extends Model {
     }
 
     /**
-     * Gender.
+     * The voter's gender, when the voter ID is valid.
      *
      * @return the {@code gender} field, or {@code null} when absent
      */
@@ -76,16 +157,7 @@ public final class VoterIdVerification extends Model {
     }
 
     /**
-     * Age in years.
-     *
-     * @return the {@code age} field, or {@code null} when absent
-     */
-    public Long getAge() {
-        return longValue("age");
-    }
-
-    /**
-     * Registered address.
+     * The registered address as one line, when the voter ID is valid.
      *
      * @return the {@code address} field, or {@code null} when absent
      */
@@ -94,11 +166,101 @@ public final class VoterIdVerification extends Model {
     }
 
     /**
-     * State.
+     * A link to the voter photo, when the roll has one. A link only, never image data; it can expire, so fetch it promptly.
+     *
+     * @return the {@code photoUrl} field, or {@code null} when absent
+     */
+    public String getPhotoUrl() {
+        return string("photoUrl");
+    }
+
+    /**
+     * The registered address split into parts.
+     *
+     * @return the {@code splitAddress} field, or {@code null} when absent
+     */
+    public VoterIdSplitAddress getSplitAddress() {
+        return model("splitAddress", VoterIdSplitAddress::new);
+    }
+
+    /**
+     * The registered state, when the voter ID is valid.
      *
      * @return the {@code state} field, or {@code null} when absent
      */
     public String getState() {
         return string("state");
+    }
+
+    /**
+     * Assembly constituency number.
+     *
+     * @return the {@code assemblyConstituencyNumber} field, or {@code null} when absent
+     */
+    public String getAssemblyConstituencyNumber() {
+        return string("assemblyConstituencyNumber");
+    }
+
+    /**
+     * Assembly constituency name.
+     *
+     * @return the {@code assemblyConstituency} field, or {@code null} when absent
+     */
+    public String getAssemblyConstituency() {
+        return string("assemblyConstituency");
+    }
+
+    /**
+     * Parliamentary constituency number.
+     *
+     * @return the {@code parliamentaryConstituencyNumber} field, or {@code null} when absent
+     */
+    public String getParliamentaryConstituencyNumber() {
+        return string("parliamentaryConstituencyNumber");
+    }
+
+    /**
+     * Parliamentary constituency name.
+     *
+     * @return the {@code parliamentaryConstituency} field, or {@code null} when absent
+     */
+    public String getParliamentaryConstituency() {
+        return string("parliamentaryConstituency");
+    }
+
+    /**
+     * Part number of the electoral roll.
+     *
+     * @return the {@code partNumber} field, or {@code null} when absent
+     */
+    public String getPartNumber() {
+        return string("partNumber");
+    }
+
+    /**
+     * Part name of the electoral roll.
+     *
+     * @return the {@code partName} field, or {@code null} when absent
+     */
+    public String getPartName() {
+        return string("partName");
+    }
+
+    /**
+     * Serial number of the voter within the part.
+     *
+     * @return the {@code serialNumber} field, or {@code null} when absent
+     */
+    public String getSerialNumber() {
+        return string("serialNumber");
+    }
+
+    /**
+     * Name of the polling station.
+     *
+     * @return the {@code pollingStation} field, or {@code null} when absent
+     */
+    public String getPollingStation() {
+        return string("pollingStation");
     }
 }

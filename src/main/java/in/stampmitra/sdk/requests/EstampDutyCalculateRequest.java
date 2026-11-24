@@ -55,6 +55,9 @@ public final class EstampDutyCalculateRequest {
         if (!body.containsKey("stampDutyAmount") || body.get("stampDutyAmount") == null) {
             throw new ValidationException("stampDutyAmount", "stampDutyAmount is required");
         }
+        if (body.get("stampDutyAmount") instanceof Number && new BigDecimal(String.valueOf(body.get("stampDutyAmount"))).compareTo(BigDecimal.valueOf(0)) <= 0) {
+            throw new ValidationException("stampDutyAmount", "stampDutyAmount must be greater than 0");
+        }
     }
 
     @Override

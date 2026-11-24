@@ -8,23 +8,34 @@ import in.stampmitra.sdk.Webhook;
 import in.stampmitra.sdk.errors.RateLimitException;
 import in.stampmitra.sdk.errors.StampMitraException;
 import in.stampmitra.sdk.http.JdkHttpTransport;
+import in.stampmitra.sdk.models.EstampCertificate;
+import in.stampmitra.sdk.models.EstampOrder;
+import in.stampmitra.sdk.models.EstampStamp;
+import in.stampmitra.sdk.models.EstampValidateResult;
 import in.stampmitra.sdk.models.GstinVerification;
 import in.stampmitra.sdk.models.LogEntry;
 import in.stampmitra.sdk.models.LogPage;
 import in.stampmitra.sdk.models.PanVerification;
+import in.stampmitra.sdk.models.StampDutyWalletTopup;
 import in.stampmitra.sdk.models.WebhookEvent;
 import in.stampmitra.sdk.models.WebhookEventType;
 import in.stampmitra.sdk.requests.CreateOrderRequest;
 import in.stampmitra.sdk.requests.CreatePaymentIntentRequest;
+import in.stampmitra.sdk.requests.DocumentUpload;
 import in.stampmitra.sdk.requests.EstampDutyCalculateRequest;
+import in.stampmitra.sdk.requests.EstampOrderRequest;
 import in.stampmitra.sdk.requests.EstampPartiesRequest;
+import in.stampmitra.sdk.requests.EstampParty;
+import in.stampmitra.sdk.requests.EstampStampLine;
+import in.stampmitra.sdk.requests.WalletTopupRequest;
 import in.stampmitra.sdk.resources.LogsParams;
 import java.math.BigDecimal;
 import java.net.http.HttpClient;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-/** Compile check for the README snippets: never run, only compiled (10 snippets). */
+/** Compile check for the README snippets: never run, only compiled (12 snippets). */
 final class ReadmeSnippets {
 
     private ReadmeSnippets() {
@@ -81,6 +92,32 @@ final class ReadmeSnippets {
     }
 
     static void snippet3(StampMitra client) throws Exception {
+        EstampOrderRequest order = EstampOrderRequest.builder()
+                .reference("order-2026-0917")
+                .addStamp(EstampStampLine.builder().state("MH").articleCode("ART1").denomination(1000)
+                        .firstParty(EstampParty.builder("Jane Doe").address("12 MG Road, Pune").build())
+                        .secondParty("John Smith").purpose("Rental Agreement").build())
+                .build();
+
+        EstampValidateResult check = client.estamp().orders().validate(order);          // dry run, not billed
+        if (check.isValid()) {
+            EstampOrder created = client.estamp().orders()
+                    .create(order, RequestOptions.withIdempotencyKey("lease-2026-0412-v1"));
+            client.estamp().orders().uploadDocument(created.getId(), DocumentUpload.of(Paths.get("pan.pdf")));
+            for (EstampStamp stamp : client.estamp().orders().listStamps(created.getId()).getItems()) {
+                EstampCertificate certificate = client.estamp().stamps().getCertificate(stamp.getId());
+                System.out.println(stamp.getId() + " " + (certificate.isAvailable() ? certificate.getDownloadUrl() : certificate.getStatus()));
+            }
+        }
+    }
+
+    static void snippet4(StampMitra client) throws Exception {
+        StampDutyWalletTopup topup = client.wallets().stampDuty().topup(WalletTopupRequest.builder().baseAmount(1000).build());
+        System.out.println("pay " + topup.getTotalCharged() + " incl. fee " + topup.getProcessingFeeAmount()
+                + " and GST " + topup.getGstAmount() + "; wallet credited " + topup.getCreditAmount());
+    }
+
+    static void snippet5(StampMitra client) throws Exception {
         try {
             client.verify().gstin("27AABCT1332L1ZZ");
         } catch (RateLimitException e) {
@@ -90,7 +127,7 @@ final class ReadmeSnippets {
         }
     }
 
-    static void snippet4(StampMitra client) throws Exception {
+    static void snippet6(StampMitra client) throws Exception {
         RequestOptions options = RequestOptions.builder()
                 .idempotencyKey("order-2026-0001")
                 .timeout(Duration.ofSeconds(10))
@@ -101,13 +138,13 @@ final class ReadmeSnippets {
                 .externalOrderId("order-2026-0001").externalCustomerId("c1").serviceCode("s").build(), options);
     }
 
-    static void snippet5(StampMitra client) throws Exception {
+    static void snippet7(StampMitra client) throws Exception {
         CompletableFuture<PanVerification> pan = client.verify().panAsync("ABCDE1234F");
         CompletableFuture<GstinVerification> gstin = client.verify().gstinAsync("27AABCT1332L1ZZ");
         String summary = pan.thenCombine(gstin, (p, g) -> p.isValid() + "/" + g.isValid()).join();
     }
 
-    static void snippet6(StampMitra client) throws Exception {
+    static void snippet8(StampMitra client) throws Exception {
         LogsParams params = LogsParams.builder().service("pan.verify").limit(100).build();
         for (LogEntry entry : client.logs().iterate(params)) {
             System.out.println(entry.getId() + " " + entry.getCreatedAt());
@@ -116,7 +153,7 @@ final class ReadmeSnippets {
         long firstFive = client.logs().stream(params).limit(5).count();
     }
 
-    static void snippet7(String secret, String rawBody, String timestamp, String signature) throws Exception {
+    static void snippet9(String secret, String rawBody, String timestamp, String signature) throws Exception {
         // rawBody: the request body as received (do not parse and re-serialise it)
         WebhookEvent event = Webhook.constructEvent(rawBody, timestamp, signature, secret);
         if (event.getType() == WebhookEventType.ORDER_PAYMENT_CONFIRMED) {
@@ -125,18 +162,18 @@ final class ReadmeSnippets {
         boolean authentic = Webhook.verifySignature(rawBody, timestamp, signature, secret);   // tolerance 300 s
     }
 
-    static void snippet8() throws Exception {
+    static void snippet10() throws Exception {
         String pan = Validators.pan(" abcde1234f ");   // "ABCDE1234F"
     }
 
-    static void snippet9() throws Exception {
+    static void snippet11() throws Exception {
         StampMitra debugging = StampMitra.builder()
                 .apiKey(System.getenv("STAMPMITRA_API_KEY"))
                 .logger(line -> System.err.println("[stampmitra] " + line))
                 .build();
     }
 
-    static void snippet10() throws Exception {
+    static void snippet12() throws Exception {
         HttpClient jdk = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
         StampMitra custom = StampMitra.builder()
                 .apiKey(System.getenv("STAMPMITRA_API_KEY"))

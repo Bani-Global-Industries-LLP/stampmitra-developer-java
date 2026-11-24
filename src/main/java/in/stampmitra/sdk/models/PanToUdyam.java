@@ -5,7 +5,7 @@ import in.stampmitra.sdk.ResponseInfo;
 import java.util.Map;
 
 /**
- * Result of a PAN to Udyam lookup.
+ * Result of a PAN to Udyam lookup. Every field except referenceId, verificationId and found is optional; udyam and udyamNumber carry the same value.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -40,7 +40,16 @@ public final class PanToUdyam extends Model {
     }
 
     /**
-     * Whether a Udyam registration was found for the PAN.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+     *
+     * @return the {@code verificationId} field, or {@code null} when absent
+     */
+    public String getVerificationId() {
+        return string("verificationId");
+    }
+
+    /**
+     * Whether an active Udyam registration was found for the PAN. Always present.
      *
      * @return the {@code found} flag ({@code false} when the field is absent)
      */
@@ -49,7 +58,7 @@ public final class PanToUdyam extends Model {
     }
 
     /**
-     * Registration status.
+     * Outcome of the lookup: SUCCESS, UDYAM_NOT_FOUND or UDYAM_IS_CANCELLED.
      *
      * @return the {@code status} field, or {@code null} when absent
      */
@@ -58,7 +67,25 @@ public final class PanToUdyam extends Model {
     }
 
     /**
-     * The Udyam registration number.
+     * The PAN the lookup was made for.
+     *
+     * @return the {@code pan} field, or {@code null} when absent
+     */
+    public String getPan() {
+        return string("pan");
+    }
+
+    /**
+     * The Udyam registration number linked to the PAN, at most one. null when no registration is linked.
+     *
+     * @return the {@code udyam} field, or {@code null} when absent
+     */
+    public String getUdyam() {
+        return string("udyam");
+    }
+
+    /**
+     * Same value as udyam. Kept so existing integrations keep working.
      *
      * @return the {@code udyamNumber} field, or {@code null} when absent
      */

@@ -5,6 +5,38 @@ versioning: [SemVer](https://semver.org/) (pre-1.0: minor versions may contain b
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-24
+
+Tracks API contract 1.2.0 (`spec/openapi.json`): 62 operations (was 31).
+
+### Added
+
+- e-Stamp: `client.estamp()` gains `getStatesAvailability`, `getState`, `getStateRequirements`, `listDistricts`, `listSros` and
+  `getWallet`; `client.estamp().orders()` has `validate`, `create`, `list`, `get`, `cancel`, `export`, `listStamps` and
+  `uploadDocument` (`multipart/form-data`, PDF/JPEG/PNG up to 10 MB); `client.estamp().stamps()` has `get`, `cancel`, `replace`,
+  `setPanCard` (HTTP 202) and `getCertificate`.
+- Wallets and account: `client.wallets().stampDuty()` and `.serviceFee()` (`getBalance`, `topup`, `listTransactions`,
+  `listInvoices`, `getInvoice`), `client.account().getBalance()` and `getUsage()`. Stamp Duty top-up amounts keep their JSON
+  types (`baseAmount`, `gstAmount`, `totalCharged` numbers; the rest strings); the SDK never computes fees.
+- Typed request values `EstampOrderRequest`, `EstampStampLine`, `EstampParty` (bare name or object), `EstampPropertyArea`,
+  `DocumentUpload`, `EstampPanCardRequest`, `WalletTopupRequest`, with local checks for the documented limits (1 to 5000 lines,
+  one state, `quantity` 1 to 1000, https `panCardImage`, 10 MB upload).
+- `StampMitraException.getFieldErrors()` (`error.details.errors[]` as `FieldIssue`), `getWallet()` (`STAMP_DUTY` or
+  `SERVICE_FEE` on a 402) and `getDetails()`.
+- Typed models for the new responses and for the nested objects of the identity results (`GstinSplitAddress`,
+  `DrivingLicenseDetails`, `UdyamNicCode`, ...); the identity results gained `verificationId` and the new registry fields.
+- Examples `EstampOrderFlow` and `EstampWallets`; table-driven replay of all 196 fixtures of the new operations.
+
+### Changed
+
+- **Retries now follow the spec markers.** Order cancel, stamp cancel, stamp replace, PAN card link, both wallet top-ups and
+  webhook replay are never retried, **even when you pass an idempotency key** (previously a replay with a caller key was
+  retried). `POST /v1/estamp/orders/validate` is retried without a key. A 409 `IDEMPOTENCY_IN_PROGRESS` is retried after
+  `Retry-After` when a key was sent. `Retry-After` is honoured on 429, 503 and that 409.
+- HTTP 422 (`IDEMPOTENCY_KEY_REUSED`) raises `ValidationException` instead of the base `StampMitraException`.
+- `EstampDutyCalculateRequest` now rejects a `stampDutyAmount` of 0 or less locally (the spec says greater than 0).
+- The identity result getter `getGstin()` reads `gstin` and falls back to `GSTIN`.
+
 ## [0.1.0] - 2026-10-16
 
 ### Added

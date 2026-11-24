@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Result of a company CIN verification.
+ * Result of a company CIN verification: the full company record. Every field except referenceId, verificationId, valid and cin is optional and is omitted when the registry does not provide it.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -41,7 +41,16 @@ public final class CinVerification extends Model {
     }
 
     /**
-     * Whether the CIN is valid.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+     *
+     * @return the {@code verificationId} field, or {@code null} when absent
+     */
+    public String getVerificationId() {
+        return string("verificationId");
+    }
+
+    /**
+     * Whether the CIN is valid. Always present. True exactly when status is VALID.
      *
      * @return the {@code valid} flag ({@code false} when the field is absent)
      */
@@ -50,7 +59,25 @@ public final class CinVerification extends Model {
     }
 
     /**
-     * Company name.
+     * Registry outcome of the lookup: VALID or INVALID.
+     *
+     * @return the {@code status} field, or {@code null} when absent
+     */
+    public String getStatus() {
+        return string("status");
+    }
+
+    /**
+     * The CIN that was verified. Always present; on an invalid CIN it is the number you sent.
+     *
+     * @return the {@code cin} field, or {@code null} when absent
+     */
+    public String getCin() {
+        return string("cin");
+    }
+
+    /**
+     * Registered company name, when the CIN is valid.
      *
      * @return the {@code companyName} field, or {@code null} when absent
      */
@@ -59,7 +86,16 @@ public final class CinVerification extends Model {
     }
 
     /**
-     * Incorporation date.
+     * Company registration number, a number (not a string), when available.
+     *
+     * @return the {@code registrationNumber} field, or {@code null} when absent
+     */
+    public Long getRegistrationNumber() {
+        return longValue("registrationNumber");
+    }
+
+    /**
+     * Date of incorporation, ISO yyyy-mm-dd.
      *
      * @return the {@code incorporationDate} field, or {@code null} when absent
      */
@@ -68,7 +104,7 @@ public final class CinVerification extends Model {
     }
 
     /**
-     * CIN status.
+     * Company status as recorded by the MCA, for example ACTIVE.
      *
      * @return the {@code cinStatus} field, or {@code null} when absent
      */
@@ -77,25 +113,7 @@ public final class CinVerification extends Model {
     }
 
     /**
-     * Company status.
-     *
-     * @return the {@code companyStatus} field, or {@code null} when absent
-     */
-    public String getCompanyStatus() {
-        return string("companyStatus");
-    }
-
-    /**
-     * Directors on record.
-     *
-     * @return the {@code directors} entries (empty when absent)
-     */
-    public List<CinDirector> getDirectors() {
-        return models("directors", CinDirector::new);
-    }
-
-    /**
-     * Company email address.
+     * Registered email address of the company.
      *
      * @return the {@code email} field, or {@code null} when absent
      */
@@ -104,20 +122,38 @@ public final class CinVerification extends Model {
     }
 
     /**
-     * Registration number.
-     *
-     * @return the {@code registrationNumber} field, or {@code null} when absent
-     */
-    public String getRegistrationNumber() {
-        return string("registrationNumber");
-    }
-
-    /**
-     * Country of incorporation.
+     * Country of incorporation, for example INDIA.
      *
      * @return the {@code incorporationCountry} field, or {@code null} when absent
      */
     public String getIncorporationCountry() {
         return string("incorporationCountry");
+    }
+
+    /**
+     * Directors / designated partners on record, with date of birth and address.
+     *
+     * @return the {@code directorDetails} entries (empty when absent)
+     */
+    public List<CinDirectorDetail> getDirectorDetails() {
+        return models("directorDetails", CinDirectorDetail::new);
+    }
+
+    /**
+     * Same value as cinStatus. Kept so existing integrations keep working.
+     *
+     * @return the {@code companyStatus} field, or {@code null} when absent
+     */
+    public String getCompanyStatus() {
+        return string("companyStatus");
+    }
+
+    /**
+     * Directors with name, DIN and designation only. Kept so existing integrations keep working; directorDetails has the full entries.
+     *
+     * @return the {@code directors} entries (empty when absent)
+     */
+    public List<CinDirector> getDirectors() {
+        return models("directors", CinDirector::new);
     }
 }

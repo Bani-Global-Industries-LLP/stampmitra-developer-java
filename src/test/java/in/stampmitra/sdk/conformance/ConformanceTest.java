@@ -34,7 +34,12 @@ import in.stampmitra.sdk.models.WebhookEventType;
 import in.stampmitra.sdk.requests.CreateOrderRequest;
 import in.stampmitra.sdk.requests.CreatePaymentIntentRequest;
 import in.stampmitra.sdk.requests.EstampDutyCalculateRequest;
+import in.stampmitra.sdk.requests.DocumentUpload;
+import in.stampmitra.sdk.requests.EstampOrderRequest;
+import in.stampmitra.sdk.requests.EstampPanCardRequest;
 import in.stampmitra.sdk.requests.EstampPartiesRequest;
+import in.stampmitra.sdk.requests.EstampStampLine;
+import in.stampmitra.sdk.requests.WalletTopupRequest;
 import in.stampmitra.sdk.resources.LogsParams;
 import in.stampmitra.sdk.support.ScriptedServer;
 import in.stampmitra.sdk.support.ScriptedServer.Step;
@@ -98,7 +103,7 @@ class ConformanceTest {
         return RequestOptions.builder().header("x-mock-scenario", s).build();
     }
 
-    // ---------------------------------------------------------------- 31 operations
+    // ---------------------------------------------------------------- 62 operations
 
     private static Map<String, Object> map(Object... kv) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -166,17 +171,58 @@ class ConformanceTest {
         ops.add(new Op("logs.list", c -> c.logs().list(LogsParams.builder().limit(50).build()), "GET", "/v1/logs", "/v1/logs"));
         ops.add(new Op("webhooks.events.list", c -> c.webhooks().events().list(20, null), "GET", "/v1/webhooks/events", "/v1/webhooks/events"));
         ops.add(new Op("webhooks.events.replay", c -> c.webhooks().events().replay("evt_1"), "POST", "/v1/webhooks/events/{id}/replay", "/v1/webhooks/events/evt_1/replay"));
+        // contract 1.2.0
+        Map<String, Object> eo = EstampOrderRequest.builder().addStamp(EstampStampLine.builder().state("MH").articleCode("ART1")
+                .denomination(1000).firstParty("Jane Doe").build()).build().toMap();
+        DocumentUpload pan = DocumentUpload.of("pan.pdf", "%PDF-1.4\n".getBytes(StandardCharsets.UTF_8));
+        ops.add(new Op("estamp.getStatesAvailability", c -> c.estamp().getStatesAvailability(true), "GET", "/v1/estamp/states/availability", "/v1/estamp/states/availability"));
+        ops.add(new Op("estamp.getState", c -> c.estamp().getState("MH"), "GET", "/v1/estamp/states/{stateCode}", "/v1/estamp/states/MH"));
+        ops.add(new Op("estamp.getStateRequirements", c -> c.estamp().getStateRequirements("MH", "ART1", new java.math.BigDecimal("500"), "e_stamp"), "GET", "/v1/estamp/states/{stateCode}/requirements", "/v1/estamp/states/MH/requirements"));
+        ops.add(new Op("estamp.listDistricts", c -> c.estamp().listDistricts("MH"), "GET", "/v1/estamp/states/{stateCode}/districts", "/v1/estamp/states/MH/districts"));
+        ops.add(new Op("estamp.listSros", c -> c.estamp().listSros("MH", "PUNE"), "GET", "/v1/estamp/states/{stateCode}/districts/{districtCode}/sros", "/v1/estamp/states/MH/districts/PUNE/sros"));
+        ops.add(new Op("estamp.getWallet", c -> c.estamp().getWallet(), "GET", "/v1/estamp/wallet", "/v1/estamp/wallet"));
+        ops.add(new Op("estamp.orders.validate", c -> c.estamp().orders().validate(eo), "POST", "/v1/estamp/orders/validate", "/v1/estamp/orders/validate"));
+        ops.add(new Op("estamp.orders.create", c -> c.estamp().orders().create(eo), "POST", "/v1/estamp/orders", "/v1/estamp/orders"));
+        ops.add(new Op("estamp.orders.list", c -> c.estamp().orders().list(1, 20, null), "GET", "/v1/estamp/orders", "/v1/estamp/orders"));
+        ops.add(new Op("estamp.orders.get", c -> c.estamp().orders().get("estord_1"), "GET", "/v1/estamp/orders/{id}", "/v1/estamp/orders/estord_1"));
+        ops.add(new Op("estamp.orders.cancel", c -> c.estamp().orders().cancel("estord_1"), "POST", "/v1/estamp/orders/{id}/cancel", "/v1/estamp/orders/estord_1/cancel"));
+        ops.add(new Op("estamp.orders.export", c -> c.estamp().orders().export("estord_1"), "GET", "/v1/estamp/orders/{id}/export", "/v1/estamp/orders/estord_1/export"));
+        ops.add(new Op("estamp.orders.listStamps", c -> c.estamp().orders().listStamps("estord_1"), "GET", "/v1/estamp/orders/{id}/stamps", "/v1/estamp/orders/estord_1/stamps"));
+        ops.add(new Op("estamp.orders.uploadDocument", c -> c.estamp().orders().uploadDocument("estord_1", pan), "POST", "/v1/estamp/orders/{orderId}/documents", "/v1/estamp/orders/estord_1/documents"));
+        ops.add(new Op("estamp.stamps.get", c -> c.estamp().stamps().get("eststamp_1"), "GET", "/v1/estamp/stamps/{stampId}", "/v1/estamp/stamps/eststamp_1"));
+        ops.add(new Op("estamp.stamps.cancel", c -> c.estamp().stamps().cancel("eststamp_1"), "POST", "/v1/estamp/stamps/{stampId}/cancel", "/v1/estamp/stamps/eststamp_1/cancel"));
+        ops.add(new Op("estamp.stamps.replace", c -> c.estamp().stamps().replace("eststamp_1"), "POST", "/v1/estamp/stamps/{stampId}/replace", "/v1/estamp/stamps/eststamp_1/replace"));
+        ops.add(new Op("estamp.stamps.setPanCard", c -> c.estamp().stamps().setPanCard("eststamp_1", EstampPanCardRequest.builder().panCardImage("https://cdn.example.com/kyc/pan-4417.jpg").build()), "POST", "/v1/estamp/stamps/{stampId}/pan-card", "/v1/estamp/stamps/eststamp_1/pan-card"));
+        ops.add(new Op("estamp.stamps.getCertificate", c -> c.estamp().stamps().getCertificate("eststamp_1"), "GET", "/v1/estamp/stamps/{stampId}/certificate", "/v1/estamp/stamps/eststamp_1/certificate"));
+        ops.add(new Op("wallets.stampDuty.getBalance", c -> c.wallets().stampDuty().getBalance(), "GET", "/v1/stamp-duty-wallet", "/v1/stamp-duty-wallet"));
+        ops.add(new Op("wallets.stampDuty.topup", c -> c.wallets().stampDuty().topup(WalletTopupRequest.builder().baseAmount(1000).build()), "POST", "/v1/stamp-duty-wallet/topup", "/v1/stamp-duty-wallet/topup"));
+        ops.add(new Op("wallets.stampDuty.listTransactions", c -> c.wallets().stampDuty().listTransactions(20, null), "GET", "/v1/stamp-duty-wallet/transactions", "/v1/stamp-duty-wallet/transactions"));
+        ops.add(new Op("wallets.stampDuty.listInvoices", c -> c.wallets().stampDuty().listInvoices(20, null), "GET", "/v1/stamp-duty-wallet/invoices", "/v1/stamp-duty-wallet/invoices"));
+        ops.add(new Op("wallets.stampDuty.getInvoice", c -> c.wallets().stampDuty().getInvoice("inv_1"), "GET", "/v1/stamp-duty-wallet/invoices/{id}", "/v1/stamp-duty-wallet/invoices/inv_1"));
+        ops.add(new Op("wallets.serviceFee.getBalance", c -> c.wallets().serviceFee().getBalance(), "GET", "/v1/service-fee-wallet", "/v1/service-fee-wallet"));
+        ops.add(new Op("wallets.serviceFee.topup", c -> c.wallets().serviceFee().topup(WalletTopupRequest.builder().baseAmount(1000).build()), "POST", "/v1/service-fee-wallet/topup", "/v1/service-fee-wallet/topup"));
+        ops.add(new Op("wallets.serviceFee.listTransactions", c -> c.wallets().serviceFee().listTransactions(20, null), "GET", "/v1/service-fee-wallet/transactions", "/v1/service-fee-wallet/transactions"));
+        ops.add(new Op("wallets.serviceFee.listInvoices", c -> c.wallets().serviceFee().listInvoices(20, null), "GET", "/v1/service-fee-wallet/invoices", "/v1/service-fee-wallet/invoices"));
+        ops.add(new Op("wallets.serviceFee.getInvoice", c -> c.wallets().serviceFee().getInvoice("inv_1"), "GET", "/v1/service-fee-wallet/invoices/{id}", "/v1/service-fee-wallet/invoices/inv_1"));
+        ops.add(new Op("account.getBalance", c -> c.account().getBalance(), "GET", "/v1/account/balance", "/v1/account/balance"));
+        ops.add(new Op("account.getUsage", c -> c.account().getUsage(), "GET", "/v1/account/usage", "/v1/account/usage"));
         return ops;
     }
+
+    /** POST operations that take no Idempotency-Key: dry run, never-retry operations and webhook replay. */
+    private static final java.util.Set<String> NO_KEY = new java.util.HashSet<>(java.util.Arrays.asList(
+            "/v1/webhooks/events/{id}/replay", "/v1/estamp/orders/validate", "/v1/estamp/orders/{id}/cancel",
+            "/v1/estamp/stamps/{stampId}/cancel", "/v1/estamp/stamps/{stampId}/replace",
+            "/v1/estamp/stamps/{stampId}/pan-card", "/v1/stamp-duty-wallet/topup", "/v1/service-fee-wallet/topup"));
 
     static Stream<Arguments> operationArgs() {
         return operations().stream().map(Arguments::of);
     }
 
     @Test
-    void thereAreExactlyThirtyOneOperations() {
-        assertThat(operations()).hasSize(31);
-        assertThat(operations().stream().map(o -> o.method + " " + o.template).distinct().count()).isEqualTo(31);
+    void thereAreExactlySixtyTwoOperations() {
+        assertThat(operations()).hasSize(62);
+        assertThat(operations().stream().map(o -> o.method + " " + o.template).distinct().count()).isEqualTo(62);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -192,9 +238,9 @@ class ConformanceTest {
         assertThat(r.get("method").asText()).isEqualTo(op.method);
         assertThat(r.get("path").asText()).isEqualTo(op.path);
         assertThat(r.get("headers").get("authorization").asText()).isEqualTo("Bearer " + KEY);
-        assertThat(r.get("headers").get("user-agent").asText()).startsWith("stampmitra-java/0.1.0 (Java ");
+        assertThat(r.get("headers").get("user-agent").asText()).startsWith("stampmitra-java/0.2.0 (Java ");
         assertThat(r.get("headers").get("accept").asText()).isEqualTo("application/json");
-        if (op.method.equals("POST") && !op.template.endsWith("/replay")) {
+        if (op.method.equals("POST") && !NO_KEY.contains(op.template)) {
             assertThat(r.get("headers").get("idempotency-key").asText()).matches(UUID_V4);
         } else {
             assertThat(r.get("headers").has("idempotency-key")).isFalse();
@@ -298,13 +344,24 @@ class ConformanceTest {
     }
 
     @Test
-    void rateLimitWithoutRetryAfterUsesTheComputedBackoff() {
-        // GET /v1/estamp/states documents a 429 that carries no Retry-After header.
+    void rateLimitWithoutRetryAfterUsesTheComputedBackoff() throws IOException {
+        // Contract 1.2.0 sends Retry-After on every 429, but a proxy may strip it: fall back to the computed backoff.
+        try (ScriptedServer server = new ScriptedServer(Step.json(429, "{\"error\":{\"code\":\"TOO_MANY_REQUESTS\",\"message\":\"slow\",\"requestId\":\"r\"}}"),
+                Step.json(429, "{\"error\":{\"code\":\"TOO_MANY_REQUESTS\",\"message\":\"slow\",\"requestId\":\"r\"}}"))) {
+            StampMitra one = builder(server.url()).maxRetries(1).build();
+            assertThatThrownBy(() -> one.estamp().listStates()).isInstanceOf(RateLimitException.class)
+                    .satisfies(e -> assertThat(((RateLimitException) e).getRetryAfterSeconds()).isNull());
+            assertThat(sleeps).hasSize(1);
+            assertThat(sleeps.get(0)).isLessThanOrEqualTo(Duration.ofMillis(500));
+        }
+    }
+
+    @Test
+    void documentedRateLimitFixturesCarryRetryAfterAndItIsHonoured() {
         StampMitra one = builder(mock.baseUrl()).maxRetries(1).build();
         assertThatThrownBy(() -> one.estamp().listStates(scenario("error-429"))).isInstanceOf(RateLimitException.class)
-                .satisfies(e -> assertThat(((RateLimitException) e).getRetryAfterSeconds()).isNull());
-        assertThat(sleeps).hasSize(1);
-        assertThat(sleeps.get(0)).isLessThanOrEqualTo(Duration.ofMillis(500));
+                .satisfies(e -> assertThat(((RateLimitException) e).getRetryAfterSeconds()).isEqualTo(1.0));
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
     }
 
     // ---------------------------------------------------------------- shared retry scenarios
@@ -322,6 +379,33 @@ class ConformanceTest {
             out.add(Arguments.of(s.get("name").asText(), s));
         }
         return out.stream();
+    }
+
+    /** The SDK's own Operation constant for a scenario's method and concrete path, found by reflection over the resources. */
+    private static Operation operationFor(String method, String path) throws IllegalAccessException {
+        Class<?>[] resources = {in.stampmitra.sdk.resources.VerifyResource.class, in.stampmitra.sdk.resources.ServicesResource.class,
+                in.stampmitra.sdk.resources.EstampResource.class, in.stampmitra.sdk.resources.EstampOrdersResource.class,
+                in.stampmitra.sdk.resources.EstampStampsResource.class, in.stampmitra.sdk.resources.OrdersResource.class,
+                in.stampmitra.sdk.resources.PaymentIntentsResource.class, in.stampmitra.sdk.resources.UsageResource.class,
+                in.stampmitra.sdk.resources.LogsResource.class, in.stampmitra.sdk.resources.WebhookEventsResource.class,
+                in.stampmitra.sdk.resources.StampDutyWalletResource.class, in.stampmitra.sdk.resources.ServiceFeeWalletResource.class,
+                in.stampmitra.sdk.resources.AccountResource.class};
+        List<Operation> matches = new ArrayList<>();
+        for (Class<?> c : resources) {
+            for (java.lang.reflect.Field f : c.getDeclaredFields()) {
+                if (f.getType() == Operation.class && java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                    f.setAccessible(true);
+                    Operation op = (Operation) f.get(null);
+                    if (op.method().equals(method) && path.matches(op.template().replaceAll("\\{\\w+\\}", "[^/]+"))) {
+                        matches.add(op);
+                    }
+                }
+            }
+        }
+        // a literal route (states/availability) wins over a templated one ({stateCode})
+        matches.sort(Comparator.comparingInt((Operation o) -> o.template().length()).reversed());
+        assertThat(matches).as("SDK operation for %s %s", method, path).isNotEmpty();
+        return matches.get(0);
     }
 
     private static Step stepFor(JsonNode item) {
@@ -346,6 +430,7 @@ class ConformanceTest {
             case "ValidationError": return ValidationException.class;
             case "AuthenticationError": return AuthenticationException.class;
             case "PermissionError": return PermissionException.class;
+            case "PaymentRequiredError": return PaymentRequiredException.class;
             case "NotFoundError": return NotFoundException.class;
             case "ConflictError": return ConflictException.class;
             case "RateLimitError": return RateLimitException.class;
@@ -359,6 +444,7 @@ class ConformanceTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("retryScenarios")
     void sharedRetryScenario(String name, JsonNode s) throws Exception {
+        Operation op = operationFor(s.get("method").asText(), s.get("path").asText());
         List<Step> steps = new ArrayList<>();
         for (JsonNode item : s.get("sequence")) {
             steps.add(stepFor(item));
@@ -380,7 +466,7 @@ class ConformanceTest {
             Optional<StampMitraException> thrown = Optional.empty();
             Integer status = null;
             try {
-                GenericResponse r = executor.execute(post ? Operation.post(path) : Operation.get(path), path, null,
+                GenericResponse r = executor.execute(op, path, null,
                         post ? Collections.<String, Object>emptyMap() : null, options.build(), keyMode.equals("auto"),
                         GenericResponse::new);
                 status = r.getResponse().getStatus();
@@ -390,8 +476,11 @@ class ConformanceTest {
 
             JsonNode outcome = s.get("outcome");
             int expectedAttempts = s.get("expectedAttempts").asInt();
-            if (optional) {
-                expectedAttempts = 1; // a keyless verification POST must not be retried by an SDK that cannot prove "no bytes sent"
+            // OPTIONAL scenarios: the SDK follows them when its operation is retry-safe on its own (validate) or a key is
+            // sent (409 IDEMPOTENCY_IN_PROGRESS); a keyless billed POST must not be retried ("no bytes sent" is unprovable).
+            boolean degraded = optional && !(op.isRetrySafe() || !keyMode.equals("none"));
+            if (degraded) {
+                expectedAttempts = 1;
                 assertThat(thrown).isPresent();
             } else if (outcome.isInt()) {
                 assertThat(thrown).as("unexpected error: %s", thrown.map(Throwable::getMessage).orElse("")).isEmpty();

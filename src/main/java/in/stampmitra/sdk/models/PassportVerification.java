@@ -5,7 +5,7 @@ import in.stampmitra.sdk.ResponseInfo;
 import java.util.Map;
 
 /**
- * Result of a passport verification.
+ * Result of a passport verification: the application record. Every field except referenceId, verificationId and valid is optional.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -40,7 +40,16 @@ public final class PassportVerification extends Model {
     }
 
     /**
-     * Whether the passport application was found and matches.
+     * StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+     *
+     * @return the {@code verificationId} field, or {@code null} when absent
+     */
+    public String getVerificationId() {
+        return string("verificationId");
+    }
+
+    /**
+     * Whether the passport application file number is valid. Always present.
      *
      * @return the {@code valid} flag ({@code false} when the field is absent)
      */
@@ -49,7 +58,25 @@ public final class PassportVerification extends Model {
     }
 
     /**
-     * Applicant's name.
+     * Outcome of the lookup: VALID or INVALID.
+     *
+     * @return the {@code status} field, or {@code null} when absent
+     */
+    public String getStatus() {
+        return string("status");
+    }
+
+    /**
+     * The passport application file number that was looked up. This is the application file number, not the passport number.
+     *
+     * @return the {@code fileNumber} field, or {@code null} when absent
+     */
+    public String getFileNumber() {
+        return string("fileNumber");
+    }
+
+    /**
+     * The applicant's name as held on the application, when valid.
      *
      * @return the {@code name} field, or {@code null} when absent
      */
@@ -58,7 +85,7 @@ public final class PassportVerification extends Model {
     }
 
     /**
-     * Date of birth.
+     * The applicant's date of birth, ISO yyyy-mm-dd, when valid.
      *
      * @return the {@code dob} field, or {@code null} when absent
      */
@@ -67,11 +94,20 @@ public final class PassportVerification extends Model {
     }
 
     /**
-     * Application type, e.g. Fresh.
+     * The type of passport application (for example NORMAL), when valid.
      *
      * @return the {@code applicationType} field, or {@code null} when absent
      */
     public String getApplicationType() {
         return string("applicationType");
+    }
+
+    /**
+     * Date the application was received, ISO yyyy-mm-dd, when valid.
+     *
+     * @return the {@code applicationReceivedDate} field, or {@code null} when absent
+     */
+    public String getApplicationReceivedDate() {
+        return string("applicationReceivedDate");
     }
 }

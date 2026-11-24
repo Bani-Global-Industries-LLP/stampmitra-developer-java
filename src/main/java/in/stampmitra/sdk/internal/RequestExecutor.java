@@ -48,9 +48,13 @@ import java.util.regex.Pattern;
  *
  * <ul>
  *   <li>GET is always retry-safe.
- *   <li>POST is retried only when it carries an {@code Idempotency-Key}. The SDK adds one to every POST except
- *       webhook replay, and re-uses the same key for every attempt.
- *   <li>Retried: 429, 502, 503, 504, connection errors and timeouts.
+ *   <li>POST is retried only when it carries an {@code Idempotency-Key} (the SDK adds one to every POST that takes
+ *       one and re-uses the same key for every attempt), or when the operation is marked
+ *       {@linkplain Operation#retrySafe() retry-safe} (a dry run).
+ *   <li>Operations marked {@linkplain Operation#neverRetry() never-retry} (cancel, replace, PAN card link, wallet
+ *       top-ups, webhook replay) get exactly one attempt, with or without a key.
+ *   <li>Retried: 429, 502, 503, 504, connection errors and timeouts, and 409 {@code IDEMPOTENCY_IN_PROGRESS} when a
+ *       key was sent. {@code Retry-After} (seconds) replaces the computed backoff.
  * </ul>
  */
 public final class RequestExecutor {
@@ -151,21 +155,25 @@ public final class RequestExecutor {
             idempotencyKey = UUID.randomUUID().toString(); // java.util.UUID uses a SecureRandom (CSPRNG)
         }
         boolean isGet = "GET".equals(op.method());
-        boolean retrySafe = isGet || idempotencyKey != null;
+        boolean retrySafe = !op.isNeverRetry() && (isGet || op.isRetrySafe() || idempotencyKey != null);
         int maxRetries = opts.getMaxRetries() != null ? opts.getMaxRetries() : config.maxRetries;
         Duration timeout = opts.getTimeout() != null ? opts.getTimeout() : config.timeout;
         if (timeout.isNegative() || timeout.isZero()) {
             throw new ValidationException("timeout", "timeout must be positive");
         }
         byte[] payload = null;
-        if (!isGet) {
+        String contentType = "application/json";
+        if (body instanceof Multipart) {
+            payload = ((Multipart) body).toBytes();
+            contentType = ((Multipart) body).contentType();
+        } else if (!isGet) {
             try {
                 payload = Json.toBytes(body == null ? Collections.emptyMap() : body);
             } catch (JsonProcessingException e) {
                 throw new ValidationException("body", "request body cannot be serialised to JSON");
             }
         }
-        Map<String, String> requestHeaders = headersFor(opts, idempotencyKey);
+        Map<String, String> requestHeaders = headersFor(opts, idempotencyKey, contentType);
         URI uri = buildUri(path, query);
 
         int attempt = 0;
@@ -205,7 +213,9 @@ public final class RequestExecutor {
             }
 
             StampMitraException error = mapError(status, text, response.getHeaders());
-            if (retrySafe && attempt <= maxRetries && isRetryableStatus(status)) {
+            boolean inProgress = status == 409 && "IDEMPOTENCY_IN_PROGRESS".equals(error.getErrorCode())
+                    && idempotencyKey != null;
+            if (retrySafe && attempt <= maxRetries && (isRetryableStatus(status) || inProgress)) {
                 Double retryAfter = error instanceof RateLimitException
                         ? ((RateLimitException) error).getRetryAfterSeconds()
                         : retryAfter(response.getHeaders());
@@ -249,11 +259,11 @@ public final class RequestExecutor {
         }
     }
 
-    private Map<String, String> headersFor(RequestOptions opts, String idempotencyKey) {
+    private Map<String, String> headersFor(RequestOptions opts, String idempotencyKey, String contentType) {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + config.apiKey.reveal());
         headers.put("Accept", "application/json");
-        headers.put("Content-Type", "application/json");
+        headers.put("Content-Type", contentType);
         headers.put("User-Agent", config.userAgent);
         headers.putAll(config.defaultHeaders);
         for (Map.Entry<String, String> e : opts.getHeaders().entrySet()) {
@@ -419,7 +429,7 @@ public final class RequestExecutor {
             body = config.apiKey.scrub((String) body);
         }
         Integer s = status;
-        if (status == 400) {
+        if (status == 400 || status == 422) {
             return new ValidationException(message, s, code, requestId, body, field, headers, null);
         } else if (status == 401) {
             return new AuthenticationException(message, s, code, requestId, body, field, headers, null);
@@ -490,7 +500,13 @@ public final class RequestExecutor {
         byte[] body = request.getBody();
         log("-> " + request.getMethod() + " " + request.getUri() + " attempt=" + attempt + " headers="
                 + Redactor.headers(request.getHeaders()) + " body="
-                + (body == null ? "" : Redactor.body(new String(body, StandardCharsets.UTF_8))));
+                + (body == null ? "" : isMultipart(request) ? "<multipart " + body.length + " bytes>"
+                : Redactor.body(new String(body, StandardCharsets.UTF_8))));
+    }
+
+    private static boolean isMultipart(TransportRequest request) {
+        String type = request.getHeaders().get("Content-Type");
+        return type != null && type.toLowerCase(Locale.ROOT).startsWith("multipart/");
     }
 
     private void logResponse(int status, String text, int attempt) {

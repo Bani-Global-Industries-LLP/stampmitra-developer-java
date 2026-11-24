@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 public final class WebhookEventsResource {
 
     private static final Operation GET_V1_WEBHOOKS_EVENTS = Operation.get("/v1/webhooks/events");
-    private static final Operation POST_V1_WEBHOOKS_EVENTS_ID_REPLAY = Operation.post("/v1/webhooks/events/{id}/replay");
+    private static final Operation POST_V1_WEBHOOKS_EVENTS_ID_REPLAY = Operation.post("/v1/webhooks/events/{id}/replay").neverRetry();
 
     private final RequestExecutor executor;
     private final boolean validateInput;

@@ -63,7 +63,7 @@ public final class TransportRequest {
     }
 
     /**
-     * Request body bytes (UTF-8 JSON).
+     * Request body bytes: UTF-8 JSON, or a {@code multipart/form-data} body when the {@code Content-Type} header says so.
      *
      * @return a copy of the body, or {@code null} when the request has none
      */
