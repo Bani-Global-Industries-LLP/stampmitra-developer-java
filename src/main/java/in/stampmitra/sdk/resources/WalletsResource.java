@@ -4,7 +4,7 @@ package in.stampmitra.sdk.resources;
 import in.stampmitra.sdk.internal.RequestExecutor;
 
 /**
- * Fulfilment wallets ({@code client.wallets()}): the Stamp Duty and Service Fee wallets.
+ * Wallets ({@code client.wallets()}): the Stamp duty wallet and the Service wallet. The Service wallet is one balance that pays for verification calls and for the service charges of an e-Stamp order; its accessor keeps the {@code serviceFee} name for compatibility.
  */
 public final class WalletsResource {
 
@@ -27,7 +27,7 @@ public final class WalletsResource {
     }
 
     /**
-     * The Stamp Duty wallet.
+     * The Stamp duty wallet.
      *
      * @return the stampDuty resource
      */
@@ -36,7 +36,7 @@ public final class WalletsResource {
     }
 
     /**
-     * The Service Fee wallet.
+     * The Service wallet (accessor name kept for compatibility).
      *
      * @return the serviceFee resource
      */

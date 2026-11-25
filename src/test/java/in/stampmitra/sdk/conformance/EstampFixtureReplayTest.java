@@ -266,12 +266,12 @@ class EstampFixtureReplayTest {
                         .category(in.stampmitra.sdk.requests.EstampStampLine.Category.E_STAMP).articleCode("ART1").denomination(1000)
                         .firstParty(in.stampmitra.sdk.requests.EstampParty.builder("Jane Doe").address("12 MG Road, Pune").build())
                         .secondParty(in.stampmitra.sdk.requests.EstampParty.builder("John Smith").build())
-                        .purpose("Rental Agreement").build())
+                        .purpose("Rental Agreement").panCardImage("https://cdn.example.com/kyc/pan-4417.jpg").build())
                 .addStamp(in.stampmitra.sdk.requests.EstampStampLine.builder().clientReference("line-002").state("MH")
                         .category(in.stampmitra.sdk.requests.EstampStampLine.Category.E_STAMP).articleCode("ART1").denomination(500)
                         .firstParty(in.stampmitra.sdk.requests.EstampParty.builder("Jane Doe").build())
                         .secondParty(in.stampmitra.sdk.requests.EstampParty.builder("Acme Pvt Ltd").build())
-                        .purpose("Indemnity Bond").build())
+                        .purpose("Indemnity Bond").panCardImage("https://cdn.example.com/kyc/pan-4418.jpg").build())
                 .build();
         JsonNode actual = Json.mapper().valueToTree(built.toMap());
         assertThat(actual.equals(Comparator.comparingDouble(JsonNode::asDouble), fx.request.get("body"))).isTrue();

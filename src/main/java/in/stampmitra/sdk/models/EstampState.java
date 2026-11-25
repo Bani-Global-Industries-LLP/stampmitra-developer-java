@@ -139,7 +139,7 @@ public final class EstampState extends Model {
     }
 
     /**
-     * Whether the state asks for the payer's PAN card. Recommended, never blocking. null means not known.
+     * Whether the state asks for the payer's PAN card. Whether the state asks for it; the order is accepted without it but the stamp cannot be completed until a PAN card is on file. null means not known.
      *
      * @return the {@code panCardImageRequired} field, or {@code null} when absent
      */

@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * The Stamp Duty wallet ({@code client.wallets().stampDuty()}). Top-ups are never retried automatically.
+ * The Stamp duty wallet ({@code client.wallets().stampDuty()}). Top-ups are never retried automatically.
  */
 public final class StampDutyWalletResource {
 
@@ -41,7 +41,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Fetches the Stamp Duty wallet balance.
+     * Fetches the Stamp duty wallet balance.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -61,7 +61,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Fetches the Stamp Duty wallet balance.
+     * Fetches the Stamp duty wallet balance.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result
@@ -83,7 +83,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Starts a Stamp Duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
+     * Starts a Stamp duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
      *
      * @param request the request
      * @return the result
@@ -94,7 +94,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Starts a Stamp Duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
+     * Starts a Stamp duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
      *
      * @param request the request
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
@@ -129,7 +129,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Starts a Stamp Duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
+     * Starts a Stamp duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
      *
      * @param request the request body as a map (unmodelled fields allowed)
      * @return the result
@@ -140,7 +140,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Starts a Stamp Duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
+     * Starts a Stamp duty wallet top-up: creates a payment order and a tax invoice. The top-up adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you add. Read every figure from the returned model; the SDK computes nothing. Never retried automatically.
      *
      * @param request the request body as a map (unmodelled fields allowed)
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
@@ -179,7 +179,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists Stamp Duty wallet transactions, newest first.
+     * Lists Stamp duty wallet transactions, newest first.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -199,7 +199,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists Stamp Duty wallet transactions, newest first.
+     * Lists Stamp duty wallet transactions, newest first.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result
@@ -221,7 +221,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists Stamp Duty wallet transactions, newest first.
+     * Lists Stamp duty wallet transactions, newest first.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -245,7 +245,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists Stamp Duty wallet transactions, newest first.
+     * Lists Stamp duty wallet transactions, newest first.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -278,7 +278,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Stamp Duty wallet top-ups.
+     * Lists the GST tax invoices of Stamp duty wallet top-ups.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -298,7 +298,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Stamp Duty wallet top-ups.
+     * Lists the GST tax invoices of Stamp duty wallet top-ups.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result
@@ -320,7 +320,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Stamp Duty wallet top-ups.
+     * Lists the GST tax invoices of Stamp duty wallet top-ups.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -344,7 +344,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Stamp Duty wallet top-ups.
+     * Lists the GST tax invoices of Stamp duty wallet top-ups.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -377,7 +377,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Fetches one Stamp Duty wallet tax invoice.
+     * Fetches one Stamp duty wallet tax invoice.
      *
      * @param id the invoice id
      * @return the result
@@ -399,7 +399,7 @@ public final class StampDutyWalletResource {
     }
 
     /**
-     * Fetches one Stamp Duty wallet tax invoice.
+     * Fetches one Stamp duty wallet tax invoice.
      *
      * @param id the invoice id
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}

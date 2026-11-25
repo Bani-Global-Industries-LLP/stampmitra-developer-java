@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * One page of Service Fee Wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page.
+ * One page of Service wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */

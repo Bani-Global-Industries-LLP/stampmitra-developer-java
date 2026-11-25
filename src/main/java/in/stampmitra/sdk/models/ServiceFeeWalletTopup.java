@@ -5,7 +5,7 @@ import in.stampmitra.sdk.ResponseInfo;
 import java.util.Map;
 
 /**
- * A Service Fee Wallet top-up: the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds.
+ * A Service wallet top-up (the route keeps its service-fee-wallet name for compatibility): the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -49,7 +49,7 @@ public final class ServiceFeeWalletTopup extends Model {
     }
 
     /**
-     * Always 0.00 for the Service Fee Wallet.
+     * Always 0.00 for the Service wallet.
      *
      * @return the {@code processingFeePercent} field, or {@code null} when absent
      */
@@ -58,7 +58,7 @@ public final class ServiceFeeWalletTopup extends Model {
     }
 
     /**
-     * Always 0.00 for the Service Fee Wallet.
+     * Always 0.00 for the Service wallet.
      *
      * @return the {@code processingFeeAmount} field, or {@code null} when absent
      */

@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
- * Priced totals in rupees. Never recalculate or override them. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee.
+ * Priced totals in rupees. Never recalculate or override them. A sandbox key gets the same figures a live key would for the same lines. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -59,7 +59,7 @@ public final class EstampOrderQuote extends Model {
     }
 
     /**
-     * What the Service Fee Wallet is debited when the order is created (the service charges net of GST), in rupees.
+     * What the Service wallet is debited when the order is created (the service charges net of GST), in rupees.
      *
      * @return the {@code serviceWalletDebitTotal} field, or {@code null} when absent
      */

@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * The Service Fee wallet ({@code client.wallets().serviceFee()}). Top-ups are never retried automatically.
+ * The Service wallet ({@code client.wallets().serviceFee()}). Top-ups are never retried automatically.
  */
 public final class ServiceFeeWalletResource {
 
@@ -41,7 +41,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Fetches the Service Fee wallet balance.
+     * Fetches the Service wallet balance.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -61,7 +61,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Fetches the Service Fee wallet balance.
+     * Fetches the Service wallet balance.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result
@@ -83,7 +83,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Starts a Service Fee wallet top-up: creates a payment order and a tax invoice. The top-up adds GST on the amount; every amount in the response is a string. Never retried automatically.
+     * Starts a Service wallet top-up: creates a payment order and a tax invoice. The minimum top-up is Rs 1,000 before GST, and 18% GST is added on the amount (GST on fees is paid at top-up, so orders debit fees before GST); every amount in the response is a string. Never retried automatically.
      *
      * @param request the request
      * @return the result
@@ -94,7 +94,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Starts a Service Fee wallet top-up: creates a payment order and a tax invoice. The top-up adds GST on the amount; every amount in the response is a string. Never retried automatically.
+     * Starts a Service wallet top-up: creates a payment order and a tax invoice. The minimum top-up is Rs 1,000 before GST, and 18% GST is added on the amount (GST on fees is paid at top-up, so orders debit fees before GST); every amount in the response is a string. Never retried automatically.
      *
      * @param request the request
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
@@ -129,7 +129,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Starts a Service Fee wallet top-up: creates a payment order and a tax invoice. The top-up adds GST on the amount; every amount in the response is a string. Never retried automatically.
+     * Starts a Service wallet top-up: creates a payment order and a tax invoice. The minimum top-up is Rs 1,000 before GST, and 18% GST is added on the amount (GST on fees is paid at top-up, so orders debit fees before GST); every amount in the response is a string. Never retried automatically.
      *
      * @param request the request body as a map (unmodelled fields allowed)
      * @return the result
@@ -140,7 +140,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Starts a Service Fee wallet top-up: creates a payment order and a tax invoice. The top-up adds GST on the amount; every amount in the response is a string. Never retried automatically.
+     * Starts a Service wallet top-up: creates a payment order and a tax invoice. The minimum top-up is Rs 1,000 before GST, and 18% GST is added on the amount (GST on fees is paid at top-up, so orders debit fees before GST); every amount in the response is a string. Never retried automatically.
      *
      * @param request the request body as a map (unmodelled fields allowed)
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
@@ -179,7 +179,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists Service Fee wallet transactions, newest first.
+     * Lists Service wallet transactions, newest first.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -199,7 +199,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists Service Fee wallet transactions, newest first.
+     * Lists Service wallet transactions, newest first.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result
@@ -221,7 +221,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists Service Fee wallet transactions, newest first.
+     * Lists Service wallet transactions, newest first.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -245,7 +245,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists Service Fee wallet transactions, newest first.
+     * Lists Service wallet transactions, newest first.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -278,7 +278,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Service Fee wallet top-ups.
+     * Lists the GST tax invoices of Service wallet top-ups.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -298,7 +298,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Service Fee wallet top-ups.
+     * Lists the GST tax invoices of Service wallet top-ups.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result
@@ -320,7 +320,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Service Fee wallet top-ups.
+     * Lists the GST tax invoices of Service wallet top-ups.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -344,7 +344,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Lists the GST tax invoices of Service Fee wallet top-ups.
+     * Lists the GST tax invoices of Service wallet top-ups.
      *
      * @param limit page size, or {@code null} for the default
      * @param cursor the {@code nextCursor} of the previous page, or {@code null}
@@ -377,7 +377,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Fetches one Service Fee wallet tax invoice.
+     * Fetches one Service wallet tax invoice.
      *
      * @param id the invoice id
      * @return the result
@@ -399,7 +399,7 @@ public final class ServiceFeeWalletResource {
     }
 
     /**
-     * Fetches one Service Fee wallet tax invoice.
+     * Fetches one Service wallet tax invoice.
      *
      * @param id the invoice id
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}

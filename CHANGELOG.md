@@ -5,6 +5,26 @@ versioning: [SemVer](https://semver.org/) (pre-1.0: minor versions may contain b
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-25
+
+Wording and snapshot refresh. Tracks API contract 1.2.1 (`spec/openapi.json`). No method, class or enum value is renamed.
+
+### Changed
+
+- Documentation (Javadoc, README, examples) now describes one customer-facing **Service wallet**: the same balance pays for
+  verification calls and for the service charges of an e-Stamp order; a top-up is a minimum of 1,000 rupees plus 18% GST, and
+  orders debit fees before GST because GST on fees is paid at top-up. The **Stamp duty wallet** pays the duty. The
+  service-fee methods (`client.wallets().serviceFee()`, `EstampWallet.getServiceFee()`) and the `SERVICE_FEE` / `STAMP_DUTY`
+  wallet values keep their names for compatibility.
+- PAN card: an order can be placed without `panCardImage`, but a PAN card is mandatory to complete the stamp. Validation is
+  unchanged and the `PAN_CARD_RECOMMENDED` advisory keeps its name.
+- Pricing wording: per paper, 99 rupees procurement + 5 rupees API charge + a convenience fee (default 5% of a paper's duty above
+  1,000 rupees), duty multiplied by quantity; sandbox quotes use the same default rates as live (client-agreed rates are not
+  applied in sandbox). The README rate tables match the published price book (PAN 4 rupees, GSTIN 3 rupees, two self-serve
+  plans). New accounts get no signup credit.
+- The create-order fixture replay builds the documented body with the PAN card links of the refreshed fixture.
+- `spec/openapi.json` refreshed to the spec repo's 1.2.1 and the generated models and resources regenerated (documentation text only).
+
 ## [0.2.0] - 2026-11-24
 
 Tracks API contract 1.2.0 (`spec/openapi.json`): 62 operations (was 31).

@@ -529,7 +529,7 @@ public final class EstampOrdersResource {
     }
 
     /**
-     * Uploads the payer's PAN card (PDF, JPEG or PNG, at most 10 MB) as {@code multipart/form-data}. The PAN card is advisory and never blocks an order. An {@code Idempotency-Key} is generated unless you pass one, and reused across automatic retries.
+     * Uploads the payer's PAN card (PDF, JPEG or PNG, at most 10 MB) as {@code multipart/form-data}. An order can be placed without a PAN card, but a PAN card is mandatory to complete the stamp. An {@code Idempotency-Key} is generated unless you pass one, and reused across automatic retries.
      *
      * @param orderId the order id
      * @param file the file to upload
@@ -553,7 +553,7 @@ public final class EstampOrdersResource {
     }
 
     /**
-     * Uploads the payer's PAN card (PDF, JPEG or PNG, at most 10 MB) as {@code multipart/form-data}. The PAN card is advisory and never blocks an order. An {@code Idempotency-Key} is generated unless you pass one, and reused across automatic retries.
+     * Uploads the payer's PAN card (PDF, JPEG or PNG, at most 10 MB) as {@code multipart/form-data}. An order can be placed without a PAN card, but a PAN card is mandatory to complete the stamp. An {@code Idempotency-Key} is generated unless you pass one, and reused across automatic retries.
      *
      * @param orderId the order id
      * @param file the file to upload

@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * A GST tax invoice for one Service Fee Wallet top-up.
+ * A GST tax invoice for one Service wallet top-up.
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */

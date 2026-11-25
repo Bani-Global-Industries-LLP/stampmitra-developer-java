@@ -11,7 +11,7 @@ Official Java client for the [StampMitra Developer API](https://developer.stampm
 Indian identity verification (PAN, GSTIN, vehicle RC, Voter ID, driving licence, passport, CIN, Udyam, bank account)
 and e-Stamp Paper. OpenAPI spec: <https://developer.stampmitra.in/openapi.json>.
 
-> **Status: pre-1.0 (0.2.0).** The API surface may change in minor releases. Pin your version.
+> **Status: pre-1.0 (0.2.1).** The API surface may change in minor releases. Pin your version.
 
 SDK guide: <https://developer.stampmitra.in/sdks/java> | API docs: <https://developer.stampmitra.in/docs>
 
@@ -21,13 +21,13 @@ SDK guide: <https://developer.stampmitra.in/sdks/java> | API docs: <https://deve
 <dependency>
   <groupId>in.stampmitra</groupId>
   <artifactId>stampmitra-java</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
 </dependency>
 ```
 
 ```kotlin
 // Gradle
-implementation("in.stampmitra:stampmitra-java:0.2.0")
+implementation("in.stampmitra:stampmitra-java:0.2.1")
 ```
 
 Requires **Java 11 or newer** (built with `--release 11`; the test suite runs on JDK 11, 17 and 21). Runtime
@@ -185,9 +185,10 @@ if (check.isValid()) {
   `fatherHusbandName`, `gender`); use the object when the state wants an address or a father's or husband's name
   (`client.estamp().getStateRequirements("MH", "ART1", new BigDecimal("1000"), "e_stamp")` returns the flags and an
   `exampleBody`). `propertyArea` takes `EstampPropertyArea.of(Unit.SQUARE_FEET, 850)` or `EstampPropertyArea.notApplicable()`.
-- **The PAN card is advisory:** a `panCardImage` link on a line, `stamps().setPanCard(stampId, ...)` (HTTP 202, processed
-  asynchronously, then read `panCard.status` from `stamps().get`) or `orders().uploadDocument(...)` (PDF, JPEG or PNG up to
-  10 MB, sent as `multipart/form-data`) never blocks an order.
+- **The PAN card:** an order can be placed without a `panCardImage`, but a PAN card is mandatory to complete the stamp (until
+  one is on file the stamp waits). Send it as a `panCardImage` link on a line, with `stamps().setPanCard(stampId, ...)` (HTTP 202,
+  processed asynchronously, then read `panCard.status` from `stamps().get`) or with `orders().uploadDocument(...)` (PDF, JPEG or
+  PNG up to 10 MB, sent as `multipart/form-data`). (`PAN_CARD_RECOMMENDED` is the name the API uses for the missing-PAN-card advisory.)
 - **Validation errors** list every finding: `e.getFieldErrors()` returns `field`, `code`, `message` and the stamp-line `index`.
   A 402 names the short wallet: `e.getWallet()` is `STAMP_DUTY` or `SERVICE_FEE`; top it up and retry with the same key.
 - `orders().list(page, limit, cursor)` and the wallet `listTransactions` / `listInvoices` return one page with
@@ -197,9 +198,11 @@ Runnable: [`EstampOrderFlow.java`](examples/src/main/java/in/stampmitra/examples
 
 ### Wallets
 
-Orders are paid from two prepaid wallets, **Stamp Duty** and **Service Fee** (`client.estamp().getWallet()` reads both;
-`client.wallets().stampDuty()` and `.serviceFee()` have `getBalance`, `topup`, `listTransactions`, `listInvoices` and
-`getInvoice`). A **Stamp Duty top-up** adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you
+Orders are paid from two prepaid wallets: the **Stamp duty wallet** (the duty) and the **Service wallet** (one balance that also
+pays for verification calls; the service charges are ₹99 procurement + ₹5 API charge per paper plus a convenience fee, and a top-up is
+a minimum of ₹1,000 plus 18% GST). The service-fee names stay for compatibility: `serviceFee()`, the `serviceFee` field of
+`client.estamp().getWallet()` (which reads both) and `SERVICE_FEE` in `e.getWallet()`. `client.wallets().stampDuty()` and `.serviceFee()` have `getBalance`, `topup`, `listTransactions`, `listInvoices` and
+`getInvoice`). A **Stamp duty top-up** adds a 6% processing fee plus 18% GST on that fee; the wallet is credited the amount you
 add, and a GST tax invoice for the fee is available from `listInvoices` / `getInvoice`. Read every figure from the response
 (`getTotalCharged()`, `getProcessingFeeAmount()`, `getGstAmount()`, `getCreditAmount()`): the SDK computes no fees and the rate
 can change. A top-up creates a payment order, so it is never retried automatically.
@@ -264,7 +267,7 @@ Default `maxRetries` is 2 (at most 3 attempts) with exponential backoff and full
   (without one the API answers 400 `IDEMPOTENCY_KEY_REQUIRED`). Pass your own key with `RequestOptions.withIdempotencyKey("...")`.
 - `POST /v1/estamp/orders/validate` is a retry-safe dry run (nothing created, not billed) and is retried without a key.
 - **Never retried automatically**, with or without a key: order cancel, stamp cancel, stamp replace, PAN card link, the
-  Stamp Duty and Service Fee wallet top-ups, and webhook replay. Their failures reach you as exceptions (`Retry-After`
+  Stamp duty and Service wallet top-ups, and webhook replay. Their failures reach you as exceptions (`Retry-After`
   is in `getHeaders()`); decide yourself whether repeating the call is safe.
 
 ```java
@@ -401,27 +404,31 @@ StampMitra custom = StampMitra.builder()
 
 ## Pricing
 
-The SDK is free and MIT-licensed. You pay only for successful API calls, from one prepaid wallet. Sandbox is free: mock data on every endpoint, and it never debits your wallet.
+The SDK is free and MIT-licensed. You pay only for successful API calls, from one prepaid **Service wallet**: the same balance pays for verification calls and for the service charges of an e-Stamp order. A Service wallet top-up is a minimum of ₹1,000 plus 18% GST; GST on fees is paid at top-up, so an order debits the fees before GST. New accounts get no signup credit. Sandbox is free: mock data on every endpoint, and it never debits your wallet.
 
-Per-call rates by plan, in rupees, excluding 18% GST:
+Per-call rates in rupees, excluding GST (the same on both self-serve plans):
 
-| Product | Pay-as-you-go | Growth | Scale | Startup | Enterprise |
-|---|---|---|---|---|---|
-| Standard verification (PAN, GSTIN, Voter ID, Driving Licence, CIN, Udyam, cross-lookups) | ₹5 | ₹4 | ₹3.50 | ₹4 | Custom |
-| Passport and Vehicle RC | ₹9 | ₹8.50 | ₹8 | ₹8.50 | Custom |
-| Bank account (penny-drop) | ₹4 | ₹4 | ₹4 | ₹4 | Custom |
-| e-Stamp API fee (StampMitra's charge only) | ₹5 | ₹4 | ₹3 | ₹4 | Custom |
+| Product | Rate per successful call |
+|---|---|
+| PAN | ₹4 |
+| GSTIN | ₹3 |
+| Voter ID, Driving Licence, CIN, PAN to GSTIN | ₹5 |
+| Udyam | ₹8.50 |
+| PAN to Udyam | ₹20 |
+| Passport and Vehicle RC | ₹9 |
+| Bank account (penny-drop) | ₹4 |
+| e-Stamp API charge (per paper, see below) | ₹5 |
 
-| | Sandbox | Pay-as-you-go | Growth | Scale | Startup | Enterprise |
-|---|---|---|---|---|---|---|
-| Plan fee | Free | ₹0 / month | ₹999 / month | ₹4,999 / month | Free for 6 months, then 50% off for 6 | Custom |
-| Seats / API keys / webhooks | 1 / 2 / 1 | 3 / 5 / 3 | 10 / 20 / 10 | 25 / 50 / 25 | 10 / 20 / 10 | Custom |
-| Requests per minute | 20 | 60 | 300 | 1,000 | 300 | Custom |
-| Log retention | 7 days | 30 days | 90 days | 365 days | 90 days | Custom |
-| IP allowlisting | No | No | Yes | Yes | Yes | Yes |
-| White-label and custom domain | No | No | No | Yes | No | Yes |
+| | Pay as you go | Business |
+|---|---|---|
+| Plan fee | ₹0 / month | ₹999 / month (₹9,990 / year) |
+| Seats / API keys / webhooks | 3 / 5 / 3 | 10 / 20 / 10 |
+| Requests per minute | 60 | 300 |
+| Daily limit per API | 100 | 500 |
+| Log retention | 30 days | 90 days |
+| IP allowlisting | No | Yes |
 
-Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total. API e-Stamp orders are charged per paper as a procurement charge plus an API charge (ex-GST); see the pricing page for current rates.
+An e-Stamp order is priced per paper: ₹99 procurement + ₹5 API charge + a convenience fee (default 5% of a paper's duty above ₹1,000), and the duty is multiplied by quantity. The duty is paid from the **Stamp duty wallet**; the service charges are paid from the Service wallet. Sandbox quotes use the same default rates as live; client-agreed rates are not applied in sandbox. There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth.
 
 ## Security
 
