@@ -56,7 +56,7 @@
     <project.build.outputTimestamp>2026-10-16T00:00:00Z</project.build.outputTimestamp>
     <maven.compiler.release>11</maven.compiler.release>
 
-    <jackson.version>2.22.3</jackson.version>
+    <jackson.version>2.22.4</jackson.version>
     <junit.version>5.13.4</junit.version>
     <assertj.version>3.27.7</assertj.version>
     <jacoco.version>0.8.13</jacoco.version>
