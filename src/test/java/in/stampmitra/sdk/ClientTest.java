@@ -97,7 +97,7 @@ class ClientTest {
         assertThat(r.getHeaders()).containsEntry("Authorization", "Bearer " + TestClients.KEY)
                 .containsEntry("Accept", "application/json").containsEntry("Content-Type", "application/json")
                 .containsEntry("X-Tenant", "acme");
-        assertThat(r.getHeaders().get("User-Agent")).startsWith("stampmitra-java/0.2.0 (Java ")
+        assertThat(r.getHeaders().get("User-Agent")).startsWith("stampmitra-java/0.2.1 (Java ")
                 .endsWith("my-app/1.2.3 (https://example.com)");
         assertThat(r.getBody()).isNull();
     }

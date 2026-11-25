@@ -422,7 +422,7 @@ public final class EstampResource {
     }
 
     /**
-     * Fetches both fulfilment wallets (Stamp Duty and Service Fee) in one call. Needs both wallet read scopes.
+     * Fetches both wallets (Stamp duty and Service) in one call; the Service wallet sits under {@code serviceFee}, a name kept for compatibility. Needs both wallet read scopes.
      *
      * @return the result
      * @throws in.stampmitra.sdk.errors.StampMitraException on API, validation or network errors
@@ -442,7 +442,7 @@ public final class EstampResource {
     }
 
     /**
-     * Fetches both fulfilment wallets (Stamp Duty and Service Fee) in one call. Needs both wallet read scopes.
+     * Fetches both wallets (Stamp duty and Service) in one call; the Service wallet sits under {@code serviceFee}, a name kept for compatibility. Needs both wallet read scopes.
      *
      * @param options per-request overrides (timeout, retries, idempotency key, headers), may be {@code null}
      * @return the result

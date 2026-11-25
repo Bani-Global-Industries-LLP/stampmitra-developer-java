@@ -177,7 +177,7 @@ public final class EstampStampsResource {
     }
 
     /**
-     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). Advisory: it never blocks the stamp. Never retried automatically.
+     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). An order can be placed without it, but a PAN card is mandatory to complete the stamp. Never retried automatically.
      *
      * @param stampId the stamp id
      * @param request the request
@@ -189,7 +189,7 @@ public final class EstampStampsResource {
     }
 
     /**
-     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). Advisory: it never blocks the stamp. Never retried automatically.
+     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). An order can be placed without it, but a PAN card is mandatory to complete the stamp. Never retried automatically.
      *
      * @param stampId the stamp id
      * @param request the request
@@ -227,7 +227,7 @@ public final class EstampStampsResource {
     }
 
     /**
-     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). Advisory: it never blocks the stamp. Never retried automatically.
+     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). An order can be placed without it, but a PAN card is mandatory to complete the stamp. Never retried automatically.
      *
      * @param stampId the stamp id
      * @param request the request body as a map (unmodelled fields allowed)
@@ -239,7 +239,7 @@ public final class EstampStampsResource {
     }
 
     /**
-     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). Advisory: it never blocks the stamp. Never retried automatically.
+     * Links a PAN card image by {@code https://} URL (HTTP 202: processed asynchronously; poll {@code get} and read {@code panCard.status}). An order can be placed without it, but a PAN card is mandatory to complete the stamp. Never retried automatically.
      *
      * @param stampId the stamp id
      * @param request the request body as a map (unmodelled fields allowed)

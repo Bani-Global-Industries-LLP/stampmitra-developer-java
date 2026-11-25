@@ -268,7 +268,7 @@ public final class EstampStampLine {
         }
 
         /**
-         * https link to the stamp-duty payer's PAN card. Optional and advisory: it never blocks an order.
+         * https link to the stamp-duty payer's PAN card. Optional when placing the order, but a PAN card is mandatory to complete the stamp.
          *
          * @param value an {@code https://} URL of at most 2048 characters
          * @return this builder

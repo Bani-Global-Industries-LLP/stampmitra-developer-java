@@ -5,7 +5,7 @@ import in.stampmitra.sdk.ResponseInfo;
 import java.util.Map;
 
 /**
- * Both e-Stamp wallets in one read: the Stamp Duty Wallet and, under serviceFee, the Service Fee Wallet.
+ * Both wallets in one read: the Stamp Duty Wallet and, under serviceFee, your Service wallet (the field name is kept for compatibility).
  *
  * <p>Unknown fields are preserved: see {@link #getRaw()} and {@link #get(String)}.
  */
@@ -67,7 +67,7 @@ public final class EstampWallet extends Model {
     }
 
     /**
-     * The Service Fee Wallet.
+     * Your Service wallet (the field name is kept for compatibility). The same balance pays for verification calls and for the service charges of an e-Stamp order.
      *
      * @return the {@code serviceFee} field, or {@code null} when absent
      */

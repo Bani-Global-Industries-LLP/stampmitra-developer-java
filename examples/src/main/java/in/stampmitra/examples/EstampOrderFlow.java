@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * The e-Stamp flow end to end: validate (dry run) -> create with an idempotency key -> upload the payer's PAN card ->
- * list the stamps -> fetch a certificate. The PAN card is advisory: it never blocks an order.
+ * list the stamps -> fetch a certificate. An order can be placed without a PAN card, but a PAN card is mandatory to complete the stamp.
  */
 public final class EstampOrderFlow {
 

@@ -5,7 +5,7 @@ import in.stampmitra.sdk.models.StampDutyWalletTopup;
 import in.stampmitra.sdk.requests.WalletTopupRequest;
 
 /**
- * Reads both fulfilment wallets and the Stamp Duty tax invoices. Pass {@code --topup} to start a Stamp Duty top-up of
+ * Reads both wallets (Stamp duty and Service) and the Stamp Duty tax invoices. Pass {@code --topup} to start a Stamp Duty top-up of
  * 1000 rupees: it creates a payment order and an invoice, so run it only on purpose.
  */
 public final class EstampWallets {
@@ -17,7 +17,7 @@ public final class EstampWallets {
         StampMitra client = Examples.client();
 
         System.out.println("stamp duty wallet: " + client.wallets().stampDuty().getBalance().getBalance());
-        System.out.println("service fee wallet: " + client.wallets().serviceFee().getBalance().getBalance());
+        System.out.println("service wallet: " + client.wallets().serviceFee().getBalance().getBalance());
         System.out.println("transactions: " + client.wallets().stampDuty().listTransactions(20, null).getItems().size());
         client.wallets().stampDuty().listInvoices(20, null).getItems()
                 .forEach(i -> System.out.println("invoice " + i.getInvoiceNumber() + " fee tax " + i.getGstAmount()));

@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
 public final class StampMitra {
 
     /** SDK version, also sent in the {@code User-Agent} header. */
-    public static final String VERSION = "0.2.0";
+    public static final String VERSION = "0.2.1";
     /** Production and sandbox base URL (the key prefix {@code sk_test_} or {@code sk_live_} selects the mode). */
     public static final String DEFAULT_BASE_URL = "https://api-b2b.stampmitra.in";
     /** Environment variable read when no API key is passed to the builder. */
@@ -135,7 +135,7 @@ public final class StampMitra {
     }
 
     /**
-     * Fulfilment wallets: {@code stampDuty()} and {@code serviceFee()}.
+     * Wallets: {@code stampDuty()} (the Stamp duty wallet) and {@code serviceFee()} (the Service wallet; the accessor keeps its name for compatibility).
      *
      * @return the wallets resource
      */

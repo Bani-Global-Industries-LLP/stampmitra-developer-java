@@ -40,7 +40,7 @@ public final class EstampDocumentRequirement extends Model {
     }
 
     /**
-     * Always false: the payer's PAN card is advisory and an order is never held back for want of it.
+     * Always false: an order is accepted without the payer's PAN card, but the stamp cannot be completed until one is on file.
      *
      * @return the {@code required} flag ({@code false} when the field is absent)
      */
